@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EXAEL</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#0a0a0c; --panel:#111114; --panel-2:#17171c; --sunk:#0c0c0f;
+  --line:#22222a; --line-2:#32323d;
+  --txt:#ececed; --dim:#9a9aa6; --dim-2:#6a6a77;
+  --accent:#e5484d; --accent-dim:#e5484d1a;
+  --ok:#5cc98e; --warn:#d9a94a; --danger:#e5484d; --violet:#a99bd6;
+  --glow:0 0 0 1px #e5484d22, 0 6px 20px #e5484d1f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--txt); padding: 22px 18px 40px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; font-size: 13px; }
+body::before { content:''; position:fixed; inset:0 0 auto 0; height:340px; pointer-events:none; z-index:0;
+  background:radial-gradient(120% 100% at 12% 0%, #e5484d0f 0%, transparent 62%); }
+.wrap { position:relative; z-index:1 }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* ---------- cabecera ---------- */
+.hero { display:flex; align-items:flex-start; gap:15px; padding-bottom:20px; border-bottom:1px solid var(--line); }
+.mono { flex:0 0 auto; width:46px; height:46px; border:1px solid #3a2226; border-radius:13px;
+  display:flex; align-items:center; justify-content:center; color:var(--accent);
+  background:linear-gradient(155deg,#1d1216 0%,#141419 100%); box-shadow:var(--glow); }
+.mono svg { width:24px; height:24px; display:block }
+.hero h1 { font-size:19px; font-weight:650; letter-spacing:1.4px; }
+.hero .sub { color:var(--dim); font-size:11.5px; margin-top:2px; }
+.hero .ahora { font-size:12px; color:var(--dim); margin-top:8px; }
+.hero .ahora .k { color:var(--dim-2); text-transform:uppercase; letter-spacing:.7px; font-size:10px; font-weight:650; margin-right:6px; }
+.hero .ahora b { color:var(--warn); font-weight:600; }
+.banner { display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:#1e1512; border:1px solid #46331f; border-left:3px solid var(--warn);
+  color:#e2c184; border-radius:7px; padding:11px 15px; font-size:12px; margin-top:18px; }
+.banner b { color:#f2d9a6; }
+
+/* ---------- indicadores ---------- */
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:10px; margin:20px 0; }
+.stat { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:13px 15px; }
+.stat .n { font-size:25px; font-weight:600; line-height:1.15; letter-spacing:-.6px; font-variant-numeric:tabular-nums; }
+.stat .l { font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.8px; margin-top:3px; font-weight:650; }
+.c-blue{color:var(--accent)}.c-green{color:var(--ok)}.c-amber{color:var(--warn)}.c-red{color:var(--danger)}.c-violet{color:var(--violet)}
+
+/* ---------- pestañas ---------- */
+.tabs { display:flex; gap:1px; border-bottom:1px solid var(--line); margin-bottom:18px; overflow-x:auto; }
+.tab { background:none; border:none; border-bottom:2px solid transparent; color:var(--dim);
+  padding:10px 15px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;
+  font-family:inherit; letter-spacing:.1px; margin-bottom:-1px; }
+.tab:hover { color:var(--txt); }
+.tab:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; border-radius:4px 4px 0 0; }
+.tab.on { color:var(--txt); border-bottom-color:var(--accent); }
+.pane { display:none } .pane.on { display:block }
+
+/* ---------- superficies ---------- */
+section { background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:20px; margin-bottom:14px; }
+h2 { font-size:14px; font-weight:650; margin-bottom:4px; display:flex; align-items:center; gap:9px; flex-wrap:wrap; letter-spacing:-.1px; }
+h3 { font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.9px; font-weight:650;
+  margin:22px 0 9px; padding-bottom:7px; border-bottom:1px solid var(--line); }
+.hint { color:var(--dim-2); font-size:11.5px; margin-bottom:14px; }
+.divider { border-top:1px solid var(--line); padding-top:15px; margin-top:18px }
+
+/* ---------- etiquetas de estado ---------- */
+.badge { font-size:9.5px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
+  padding:2px 7px; border-radius:4px; border:1px solid; white-space:nowrap; }
+.b-pend  { color:var(--accent); border-color:#5c2b2e; background:var(--accent-dim) }
+.b-urg   { color:var(--danger); border-color:#5c2b2e; background:#e5484d1a }
+.b-done  { color:var(--ok);     border-color:#2b4a39; background:#5cc98e14 }
+.b-live  { color:var(--ok);     border-color:#2b4a39; background:#5cc98e14 }
+.b-ai    { color:var(--violet); border-color:#403a5c; background:#a99bd614 }
+.b-mute  { color:var(--dim);    border-color:var(--line-2); background:transparent }
+
+/* ---------- horario ---------- */
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th, td { padding:0; text-align:center; border:1px solid var(--line); }
+th { background:var(--panel-2); color:var(--dim); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.8px; font-weight:650; padding:8px 4px; }
+th.today { background:var(--accent-dim); color:var(--accent); }
+td .cell { padding:9px 7px; min-height:36px; outline:none; cursor:text; }
+td .cell:focus { background:#e5484d26; box-shadow:inset 0 0 0 2px var(--accent); }
+td.hora .cell { background:var(--panel-2); color:var(--dim); font-weight:600; font-size:11px;
+  white-space:nowrap; font-variant-numeric:tabular-nums; }
+td.today .cell { box-shadow:inset 3px 0 0 var(--accent); }
+tr.now td.hora .cell { background:#241b0e; color:var(--warn); }
+tr.now td.hora .cell::after { content:' \2022'; }
+.t-clase{background:#1a1a21;color:var(--txt)}
+.t-estudio{background:#12241b;color:#6ed49f;font-weight:600}
+.t-deporte{background:#1e1a2a;color:#b3a4e0}
+.t-libre{background:var(--sunk);color:#4e4e59}
+.t-examen{background:#2a1417;color:#f0787c;font-weight:600}
+.legend { display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:var(--dim); margin-top:12px; align-items:center }
+.dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:middle }
+
+/* ---------- fichas ---------- */
+.card { border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:7px;
+  padding:14px 16px; margin-bottom:8px; background:var(--panel-2); }
+.card.done { border-left-color:var(--ok); opacity:.55 } .card.done .ctitle { text-decoration:line-through }
+.card.urgent { border-left-color:var(--danger) }
+.card.editing { border-color:var(--warn); box-shadow:0 0 0 1px #d9a94a40 }
+.chead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px }
+.ctitle { font-weight:600; font-size:13.5px }
+.card .d { color:var(--dim); font-size:12px; margin-bottom:10px }
+.card .d i { color:var(--dim-2) }
+.meta { display:flex; flex-wrap:wrap; gap:18px; font-size:11px; color:var(--dim-2) }
+.meta span { display:flex; gap:5px }
+.meta .k { text-transform:uppercase; letter-spacing:.6px; font-weight:650; font-size:9.5px; padding-top:1px }
+.meta b { color:var(--txt); font-weight:600 }
+
+/* ---------- controles ---------- */
+.row { display:flex; gap:8px; flex-wrap:wrap; margin-top:11px; align-items:center }
+input, select, textarea { background:var(--sunk); border:1px solid var(--line-2); color:var(--txt);
+  padding:8px 11px; border-radius:6px; font-size:12px; font-family:inherit }
+input, textarea { flex:1; min-width:130px } textarea { resize:vertical; width:100% }
+input::placeholder, textarea::placeholder { color:var(--dim-2) }
+input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim) }
+button { background:var(--accent); border:1px solid transparent; color:#ffffff; padding:8px 15px;
+  border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; letter-spacing:.1px }
+button:hover { background:#ef5a5f }
+button.ghost { background:transparent; border-color:var(--line-2); color:var(--dim); padding:6px 12px; font-size:11.5px }
+button.ghost:hover { background:var(--panel-2); color:var(--txt); border-color:var(--dim-2) }
+button.ghost.on { border-color:var(--accent); color:var(--accent); background:var(--accent-dim) }
+button.danger { background:transparent; border-color:#5c2b2e; color:var(--danger); padding:6px 12px; font-size:11.5px }
+button.danger:hover { background:#e5484d1a; border-color:var(--danger) }
+button:disabled { opacity:.45; cursor:not-allowed }
+.x { background:none; border:none; color:var(--dim-2); cursor:pointer; font-size:15px; line-height:1;
+  padding:3px 8px; border-radius:4px; font-family:inherit }
+.x:hover { color:var(--danger); background:#e5484d1a }
+label.ck { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim); cursor:pointer }
+label.ck input { flex:0; min-width:auto; width:15px; height:15px; accent-color:var(--accent) }
+
+/* ---------- eventos ---------- */
+.ev { display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px }
+.ev:last-child { border-bottom:none }
+.ev .when { color:var(--dim); font-size:11.5px; white-space:nowrap; font-variant-numeric:tabular-nums }
+.dayhead { font-size:10px; text-transform:uppercase; letter-spacing:.9px; font-weight:650;
+  color:var(--dim-2); padding:14px 0 4px }
+.daygroup:first-child .dayhead { padding-top:0 }
+.dayhead.hoy { color:var(--warn) }
+.src { font-size:9px; padding:1px 6px; border-radius:4px; border:1px solid var(--line-2);
+  color:var(--dim-2); margin-left:8px; letter-spacing:.5px; text-transform:uppercase; font-weight:650 }
+.empty { color:var(--dim-2); font-size:12px; padding:12px 0 }
+
+/* ---------- chat ---------- */
+.chat { background:var(--sunk); border:1px solid var(--line); border-radius:7px; padding:14px;
+  max-height:360px; overflow-y:auto; margin-bottom:11px }
+.msg { margin-bottom:14px } .msg:last-child { margin-bottom:0 }
+.msg .who { font-size:9.5px; text-transform:uppercase; letter-spacing:.9px; font-weight:650;
+  color:var(--dim-2); margin-bottom:4px }
+.msg.a .who { color:var(--violet) }
+.bubble { padding:10px 13px; border-radius:6px; white-space:pre-wrap; word-wrap:break-word; font-size:12.5px }
+.msg.u .bubble { background:var(--panel-2); border-left:2px solid var(--line-2) }
+.msg.a .bubble { background:#16141d; border-left:2px solid var(--violet) }
+.bubble code { background:#22222a; padding:1px 5px; border-radius:3px;
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px }
+.chips { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px }
+.chip { background:transparent; border:1px solid var(--line-2); color:var(--dim); font-size:11.5px;
+  padding:5px 12px; border-radius:14px; cursor:pointer; font-family:inherit }
+.chip:hover { border-color:var(--violet); color:var(--txt) }
+
+/* ---------- material ---------- */
+.drop { border:1px dashed var(--line-2); border-radius:8px; padding:26px; text-align:center;
+  cursor:pointer; background:var(--sunk); transition:border-color .15s, background .15s; margin-bottom:13px; color:var(--dim) }
+.drop:hover, .drop.over { border-color:var(--accent); background:var(--accent-dim); color:var(--txt) }
+.drop .t1 { font-size:12.5px; margin-top:8px } .drop .t1 b { color:var(--txt) }
+.drop .t2 { font-size:11px; color:var(--dim-2); margin-top:4px }
+.mat { display:flex; align-items:center; gap:13px; padding:11px 13px; border:1px solid var(--line);
+  border-radius:7px; margin-bottom:7px; background:var(--panel-2); font-size:12.5px }
+.ftype { flex:0 0 auto; font:650 9.5px/1 ui-monospace,Menlo,Consolas,monospace; letter-spacing:.5px;
+  color:var(--dim); border:1px solid var(--line-2); border-radius:4px; padding:6px 0; min-width:38px; text-align:center }
+.mat .info { flex:1; min-width:0 }
+.mat .nm { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.mat .sub { font-size:10.5px; color:var(--dim-2); margin-top:2px }
+.bar { height:3px; background:var(--line); border-radius:2px; overflow:hidden; margin:8px 0 }
+.bar i { display:block; height:100%; background:var(--accent); transition:width .3s }
+.up-item { font-size:11.5px; color:var(--dim); margin-top:9px }
+
+/* ---------- sincronización ---------- */
+.log { background:var(--sunk); border:1px solid var(--line); border-radius:7px; padding:12px;
+  font-size:11px; font-family:ui-monospace,Menlo,Consolas,monospace; max-height:190px; overflow-y:auto; color:var(--dim) }
+.log div { padding:2px 0 } .log .ok { color:var(--ok) } .log .er { color:var(--danger) } .log .in { color:var(--accent) }
+.link-row { display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding:10px 0; border-bottom:1px solid var(--line); font-size:12px }
+.link-row:last-child { border-bottom:none }
+.link-row span { color:var(--dim) }
+a { color:var(--accent); text-decoration:none; font-size:12px } a:hover { text-decoration:underline }
+/* marca de enlace externo dibujada en CSS: sin glifos ni fuentes de por medio */
+a[target="_blank"]::after { content:''; display:inline-block; width:5px; height:5px; margin-left:6px;
+  border-top:1.5px solid currentColor; border-right:1.5px solid currentColor;
+  transform:rotate(-45deg) translateY(1px); opacity:.65 }
+.scroll { overflow-x:auto }
+
+/* ---------- aviso flotante ---------- */
+#toast { position:fixed; bottom:20px; right:20px; background:var(--panel-2); border:1px solid var(--line-2);
+  border-left:3px solid var(--ok); padding:12px 17px; border-radius:7px; font-size:12px; opacity:0;
+  transform:translateY(8px); transition:opacity .2s, transform .2s; pointer-events:none; z-index:99;
+  max-width:min(340px,calc(100vw - 40px)); box-shadow:0 10px 30px #00000080 }
+#toast.on { opacity:1; transform:translateY(0) }
+#toast.err { border-left-color:var(--danger) }
+
+/* ---------- refinamientos ---------- */
+section { background:linear-gradient(180deg,#131318 0%,var(--panel) 100%);
+  box-shadow:0 1px 0 #ffffff08 inset, 0 2px 14px #00000040; }
+.stat { background:linear-gradient(180deg,#15151b 0%,var(--panel) 100%);
+  box-shadow:0 1px 0 #ffffff08 inset; transition:border-color .18s, transform .18s }
+.stat:hover { border-color:var(--line-2); transform:translateY(-1px) }
+.stat .n { letter-spacing:-1px }
+.hero { border-bottom:1px solid var(--line); }
+.hero .sub { letter-spacing:.2px }
+.tab { transition:color .15s, border-color .15s }
+.tab.on { border-bottom-color:var(--accent); }
+.card { transition:border-color .18s, transform .18s }
+.card:hover { transform:translateX(1px) }
+button { transition:background .15s, border-color .15s, color .15s }
+.chip { transition:border-color .15s, color .15s, background .15s }
+.chip:hover { background:#ffffff06 }
+.mat { transition:border-color .18s, background .18s }
+.mat:hover { border-color:var(--line-2); background:#1a1a20 }
+::-webkit-scrollbar { width:10px; height:10px }
+::-webkit-scrollbar-track { background:transparent }
+::-webkit-scrollbar-thumb { background:#2a2a33; border-radius:6px; border:2px solid var(--bg) }
+::-webkit-scrollbar-thumb:hover { background:#3a3a46 }
+::selection { background:#e5484d40; color:#fff }
+
+/* ---------- simulacros ---------- */
+.opt { display:flex; align-items:flex-start; gap:9px; padding:8px 11px; margin-bottom:5px;
+  border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:12.5px;
+  background:var(--sunk); transition:border-color .15s, background .15s }
+.opt:hover { border-color:var(--line-2) }
+.opt input { flex:0 0 auto; min-width:auto; width:15px; height:15px; margin-top:1px; accent-color:var(--accent) }
+.opt.corr { border-color:#2b4a39; background:#5cc98e12; color:#8fe0b4 }
+.opt.err  { border-color:#5c2b2e; background:#e5484d12; color:#f0787c }
+.expl { margin-top:9px; padding:9px 12px; border-left:2px solid var(--violet);
+  background:#16141d; border-radius:0 6px 6px 0; font-size:12px; color:var(--dim) }
+.expl .k { text-transform:uppercase; letter-spacing:.7px; font-size:9.5px; font-weight:700;
+  color:var(--violet); margin-right:6px }
+.card.q { background:var(--panel-2) }
+.card.q.done, .card.q.urgent { opacity:1 }
+.card.q.done .ctitle { text-decoration:none }
+
+/* ---------- pantalla de bloqueo ---------- */
+#lock { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+  padding:24px; background:radial-gradient(120% 90% at 50% 0%, #1a0d10 0%, #0a0a0c 58%); }
+#lock.hide { display:none }
+.lockbox { width:100%; max-width:370px; text-align:center }
+.lockmark { width:64px; height:64px; margin:0 auto 20px; border:1px solid #3a2226; border-radius:18px;
+  display:flex; align-items:center; justify-content:center; color:var(--accent);
+  background:linear-gradient(155deg,#1d1216,#141419); box-shadow:0 0 0 1px #e5484d22, 0 10px 34px #e5484d26; }
+.lockmark svg { width:34px; height:34px }
+.lockbox h2 { display:block; font-size:21px; font-weight:650; letter-spacing:2.6px; margin-bottom:6px }
+.lockbox p { color:var(--dim); font-size:12.5px; margin-bottom:22px; line-height:1.5 }
+.lockbox input { width:100%; text-align:center; letter-spacing:3px; font-size:15px; padding:12px;
+  background:#101015; border:1px solid var(--line-2); border-radius:9px; margin-bottom:9px }
+.lockbox input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim) }
+.lockbox button { width:100%; padding:11px; font-size:13px; border-radius:9px; margin-top:4px }
+.lockerr { color:var(--danger); font-size:12px; min-height:18px; margin-top:10px }
+.lockalt { margin-top:20px; padding-top:16px; border-top:1px solid var(--line) }
+.lockalt button { background:none; border:none; color:var(--dim-2); font-size:11.5px;
+  cursor:pointer; font-family:inherit; text-decoration:underline; width:auto; padding:0 }
+.lockalt button:hover { color:var(--dim) }
+.shake { animation:sh .32s }
+@keyframes sh { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-7px)} 40%,80%{transform:translateX(7px)} }
+
+/* ---------- modo local ---------- */
+.banner.local { background:#12161d; border:1px solid var(--line-2); border-left:3px solid var(--dim-2); color:var(--dim) }
+.banner.local b { color:var(--txt) }
+
+/* ---------- pantallas chicas ---------- */
+@media (max-width:640px){
+  body { padding:14px 11px 32px; font-size:13.5px }
+  .hero { gap:12px } .mono { width:40px; height:40px; border-radius:11px } .mono svg { width:21px; height:21px }
+  .hero h1 { font-size:17px } .hero .sub { font-size:11px }
+  .stats { grid-template-columns:repeat(2,1fr); gap:8px }
+  .stat { padding:11px 12px } .stat .n { font-size:21px }
+  .tabs { gap:0; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+  .tabs::-webkit-scrollbar { display:none }
+  .tab { padding:9px 12px; font-size:12px }
+  section { padding:15px 13px; border-radius:11px }
+  .row { gap:6px } .row input, .row select { min-width:0 }
+  input, select, textarea, button { font-size:16px }   /* evita el zoom automático de iOS */
+  .badge, .hint, .meta, .empty { font-size:11.5px }
+  table { font-size:11.5px } td .cell { padding:7px 5px; min-height:32px }
+  .opt { padding:10px 12px }
+  .meta { gap:10px }
+  #toast { left:12px; right:12px; bottom:12px; max-width:none }
+  .lockbox { max-width:100% }
+}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="puente-google.js"></script>
+</head>
+<body>
+<div id="lock">
+  <div class="lockbox">
+    <div class="lockmark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3 1.5 8.2 12 13.4l10.5-5.2L12 3Z"/>
+        <path d="M5.4 10.6v5.1c0 .6.3 1.1.9 1.4 1.5.9 3.6 1.4 5.7 1.4s4.2-.5 5.7-1.4c.6-.3.9-.8.9-1.4v-5.1"/>
+        <path d="M22 8.4v5.3"/><circle cx="22" cy="15" r="1.15" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <h2>EXAEL</h2>
+    <p id="lock-msg">Ingresa tu contraseña para continuar</p>
+    <form id="lock-form" autocomplete="off">
+      <input type="password" id="lock-pin" placeholder="Contraseña" autocomplete="current-password">
+      <input type="password" id="lock-pin2" placeholder="Repite la contraseña" autocomplete="new-password" style="display:none">
+      <button type="submit" id="lock-btn">Entrar</button>
+    </form>
+    <div class="lockerr" id="lock-err"></div>
+    <div class="lockalt" id="lock-alt" style="display:none">
+      <button type="button" onclick="olvidePin()">Olvidé mi contraseña</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="mono" aria-label="EXAEL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 1.5 8.2 12 13.4l10.5-5.2L12 3Z"/><path d="M5.4 10.6v5.1c0 .6.3 1.1.9 1.4 1.5.9 3.6 1.4 5.7 1.4s4.2-.5 5.7-1.4c.6-.3.9-.8.9-1.4v-5.1"/><path d="M22 8.4v5.3"/><circle cx="22" cy="15" r="1.15" fill="currentColor" stroke="none"/></svg></div>
+    <div>
+      <h1>EXAEL</h1>
+      <div class="sub">Centro académico &middot; Bolivia (America/La_Paz) &middot; <span id="today"></span></div>
+      <div class="ahora" id="ahora"></div>
+    </div>
+  </header>
+
+  <div class="banner local" id="no-bridge" style="display:none">
+    <span><b>Modo local.</b> Materias, horario, tareas y simulacros funcionan con normalidad.
+    Calendar y Drive necesitan conexión con Google.</span>
+    <button class="ghost" onclick="entrarGoogle()" style="margin-left:auto">Conectar Google</button>
+    <button class="ghost" onclick="ocultarAviso()">Ocultar</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n c-blue"   id="s-pend">0</div><div class="l">Pendientes</div></div>
+    <div class="stat"><div class="n c-green"  id="s-done">0</div><div class="l">Completadas</div></div>
+    <div class="stat"><div class="n c-red"    id="s-urg">0</div><div class="l">Urgentes (3 días)</div></div>
+    <div class="stat"><div class="n c-amber"  id="s-hrs">0</div><div class="l">Horas estudio / semana</div></div>
+    <div class="stat"><div class="n c-violet" id="s-ev">—</div><div class="l">Eventos esta semana</div></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab on" data-p="ia"  role="tab">Tutor</button>
+    <button class="tab"    data-p="mts" role="tab">Materias</button>
+    <button class="tab"    data-p="hor" role="tab">Horario</button>
+    <button class="tab"    data-p="tar" role="tab">Tareas</button>
+    <button class="tab"    data-p="sim" role="tab">Simulacros</button>
+    <button class="tab"    data-p="eve" role="tab">Eventos</button>
+    <button class="tab"    data-p="mat" role="tab">Material</button>
+    <button class="tab"    data-p="syn" role="tab">Sincronización</button>
+  </div>
+
+  <!-- ========== TUTOR ========== -->
+  <div class="pane on" id="p-ia">
+    <section>
+      <h2>Tutor académico <span class="badge b-ai">Conoce tus datos</span></h2>
+      <div class="hint">Lee tu horario, tus fichas y tus eventos antes de responder. La conversación se guarda.</div>
+      <div class="chat" id="chat"></div>
+      <div class="chips">
+        <button class="chip" onclick="ask('¿Qué debería priorizar hoy y por qué?')">¿Qué priorizo hoy?</button>
+        <button class="chip" onclick="ask('Analiza mi horario semanal: dónde desperdicio tiempo y qué bloques libres puedo aprovechar.')">Analiza mi horario</button>
+        <button class="chip" onclick="ask('Arma un plan realista para esta semana repartiendo mis tareas en mis bloques de estudio.')">Plan de la semana</button>
+        <button class="chip" onclick="ask('¿Cuáles de mis tareas están en riesgo de que no llegue a tiempo?')">¿Qué está en riesgo?</button>
+      </div>
+      <textarea id="q" rows="2" placeholder="Escribe tu pregunta…   (Ctrl+Enter para enviar)"></textarea>
+      <div class="row"><button id="btn-ask" onclick="ask()">Preguntar</button><button class="ghost" onclick="clearChat()">Limpiar conversación</button></div>
+    </section>
+  </div>
+
+
+  <!-- ========== MATERIAS ========== -->
+  <div class="pane" id="p-mts">
+    <section>
+      <h2>Materias del semestre</h2>
+      <div class="hint">La base de todo: lo que registres aquí alimenta las tareas, el material, los simulacros y al tutor.</div>
+      <div id="materias"></div>
+      <h3 id="mts-form-title">Nueva materia</h3>
+      <div class="row" style="margin-top:0">
+        <input id="mt-nombre" placeholder="Nombre de la materia (ej. Cálculo I)">
+        <input id="mt-sigla" placeholder="Sigla" style="max-width:110px;flex:0">
+        <input id="mt-cred" type="number" min="0" max="20" placeholder="Cr." style="max-width:75px;flex:0">
+      </div>
+      <div class="row">
+        <input id="mt-doc" placeholder="Docente" style="max-width:220px">
+        <input id="mt-aula" placeholder="Aula / horario" style="max-width:200px">
+        <input id="mt-temas" placeholder="Temas del semestre (separados por coma)">
+      </div>
+      <div class="row">
+        <button id="mt-save" onclick="saveMateria()">Agregar materia</button>
+        <button class="ghost" id="mt-cancel" style="display:none" onclick="cancelMateria()">Cancelar</button>
+        <button class="ghost" onclick="pushMaterias()" style="margin-left:auto">Enviar a Google Sheets</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== HORARIO ========== -->
+  <div class="pane" id="p-hor">
+    <section>
+      <h2>Horario semanal</h2>
+      <div class="hint">Haz clic en una celda y escribe; se guarda solo. El día de hoy y la franja en curso se resaltan.</div>
+      <div class="scroll"><table id="tbl-h"></table></div>
+      <div class="row">
+        <input id="h-hora" placeholder="Nueva franja (ej: 16:30–18:00)" style="max-width:230px">
+        <button class="ghost" onclick="addRow()">Agregar franja</button>
+        <button class="ghost" onclick="clearGrid()">Vaciar</button>
+        <button class="ghost" onclick="resetGrid()">Restaurar base</button>
+      </div>
+      <div class="legend">
+        <span>Color automático según el texto:</span>
+        <span><span class="dot" style="background:#1a1a21;border:1px solid var(--line-2)"></span>materia</span>
+        <span><span class="dot" style="background:#12241b"></span>estudio</span>
+        <span><span class="dot" style="background:#1e1a2a"></span>deporte</span>
+        <span><span class="dot" style="background:#2a1417"></span>examen</span>
+        <span><span class="dot" style="background:#0c0c0f;border:1px solid var(--line-2)"></span>libre</span>
+      </div>
+      <div class="row divider">
+        <button onclick="pushHorario()">Enviar horario a Google Sheets</button>
+        <button onclick="pushHorarioCal()">Volcar horario al Calendar (esta semana)</button>
+        <button class="danger" id="btn-undo-hor" style="display:none" onclick="undoHorarioCal()">Deshacer último volcado</button>
+      </div>
+      <div class="hint" id="hint-undo" style="margin:9px 0 0"></div>
+    </section>
+  </div>
+
+  <!-- ========== TAREAS ========== -->
+  <div class="pane" id="p-tar">
+    <section>
+      <h2>Fichas de tareas</h2>
+      <div class="hint">Con fecha y sincronización activa, cada ficha crea su evento en Google Calendar. Al editarla o borrarla, el evento también cambia.</div>
+      <div class="row" style="margin-top:0;margin-bottom:14px">
+        <input id="t-filtro" placeholder="Filtrar por tarea, materia o consigna…" oninput="renderTasks()">
+        <button class="ghost on" data-f="todas" onclick="setFiltro('todas')">Todas</button>
+        <button class="ghost" data-f="pend" onclick="setFiltro('pend')">Pendientes</button>
+        <button class="ghost" data-f="urg"  onclick="setFiltro('urg')">Urgentes</button>
+        <button class="ghost" data-f="done" onclick="setFiltro('done')">Completadas</button>
+      </div>
+      <div id="tasks"></div>
+      <h3 id="form-title">Nueva ficha</h3>
+      <div class="row" style="margin-top:0">
+        <input id="i-name" placeholder="Nombre de la tarea">
+        <input id="i-desc" placeholder="Consigna / qué debo entregar">
+      </div>
+      <div class="row">
+        <input id="i-mat" list="dl-materias" placeholder="Materia" style="max-width:160px">
+        <input id="i-date" type="date" min="2024-01-01" max="2035-12-31" style="max-width:155px;flex:0">
+        <input id="i-time" type="time" value="20:00" style="max-width:115px;flex:0">
+        <input id="i-pts" placeholder="Pts" style="max-width:70px;flex:0">
+        <button id="btn-save" onclick="saveTask()">Crear ficha</button>
+        <button class="ghost" id="btn-cancel" style="display:none" onclick="cancelEdit()">Cancelar</button>
+      </div>
+      <div class="row divider"><button class="ghost" onclick="pushTareas()">Enviar tareas a Google Sheets</button></div>
+    </section>
+  </div>
+
+
+  <!-- ========== SIMULACROS ========== -->
+  <div class="pane" id="p-sim">
+    <section>
+      <h2>Simulacro de examen <span class="badge b-ai">Generado por el tutor</span></h2>
+      <div class="hint">Elige materia y tema, y el tutor arma un examen de opción múltiple. Al corregir te explica cada respuesta.</div>
+      <div class="row" style="margin-top:0">
+        <select id="sm-materia" style="flex:1;min-width:170px"></select>
+        <input id="sm-tema" placeholder="Tema concreto (opcional): límites, derivadas…">
+      </div>
+      <div class="row">
+        <select id="sm-num" style="max-width:150px">
+          <option value="10">10 preguntas</option>
+          <option value="15" selected>15 preguntas</option>
+          <option value="20">20 preguntas</option>
+          <option value="25">25 preguntas</option>
+        </select>
+        <select id="sm-dif" style="max-width:160px">
+          <option value="básico">Nivel básico</option>
+          <option value="intermedio" selected>Nivel intermedio</option>
+          <option value="avanzado">Nivel avanzado</option>
+        </select>
+        <button id="sm-gen" onclick="generarSimulacro()">Generar simulacro</button>
+        <button class="ghost" id="sm-reset" style="display:none" onclick="cerrarSimulacro()">Cerrar</button>
+      </div>
+      <div id="sm-estado"></div>
+      <div id="sm-quiz"></div>
+      <div class="row" id="sm-acciones" style="display:none">
+        <button onclick="corregirSimulacro()">Corregir examen</button>
+        <span id="sm-progreso" class="hint" style="margin:0"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Historial de simulacros</h2>
+      <div class="stats" style="margin:0 0 14px">
+        <div class="stat"><div class="n c-violet" id="sm-total">0</div><div class="l">Simulacros hechos</div></div>
+        <div class="stat"><div class="n c-green"  id="sm-prom">—</div><div class="l">Promedio</div></div>
+        <div class="stat"><div class="n c-amber"  id="sm-mejor">—</div><div class="l">Mejor nota</div></div>
+      </div>
+      <div id="sm-hist"></div>
+    </section>
+  </div>
+
+  <!-- ========== EVENTOS ========== -->
+  <div class="pane" id="p-eve">
+    <section>
+      <h2>Eventos de la semana <span class="badge b-live">Google en vivo</span></h2>
+      <div class="hint">Lo que agregues aquí se escribe directo en tu Google Calendar.</div>
+      <div id="events"><div class="empty">Cargando…</div></div>
+      <div class="row divider">
+        <input id="e-name" placeholder="Nombre del evento">
+        <input id="e-date" type="date" min="2024-01-01" max="2035-12-31" style="max-width:155px;flex:0">
+        <input id="e-time" type="time" style="max-width:115px;flex:0">
+        <input id="e-dur" type="number" value="1" min="1" max="12" title="Duración en horas" style="max-width:75px;flex:0">
+        <button onclick="addEvent()">Crear evento</button>
+        <button class="ghost" onclick="loadGoogle()">Refrescar</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== MATERIAL ========== -->
+  <div class="pane" id="p-mat">
+    <section>
+      <h2>Material de estudio <span class="badge b-live">Se sube a Drive</span></h2>
+      <div class="hint">PDFs, imágenes, apuntes y textos. Todo va a tu carpeta de Drive y el tutor puede leerlo.</div>
+
+      <div id="drop" class="drop">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="16"/>
+        </svg>
+        <div class="t1"><b>Arrastra archivos aquí</b> o haz clic para elegir</div>
+        <div class="t2">PDF · imágenes · Word · TXT · Excel · PowerPoint — hasta 15 MB por archivo</div>
+        <input type="file" id="f-in" multiple style="display:none">
+      </div>
+      <div class="row" style="margin-top:0">
+        <input id="m-mat" list="dl-materias" placeholder="Materia — se usa como etiqueta (ej: Cálculo I)" style="max-width:300px">
+        <select id="m-tipo">
+          <option value="Apunte">Apunte / Texto</option>
+          <option value="Libro">Libro / PDF</option>
+          <option value="Biografía">Biografía</option>
+          <option value="Imagen">Imagen / Diagrama</option>
+          <option value="Práctica">Práctica / Ejercicios</option>
+          <option value="Examen">Examen / Guía</option>
+        </select>
+        <span style="font-size:11px;color:var(--dim-2)">La etiqueta se antepone al nombre del archivo</span>
+      </div>
+      <div id="up-progress"></div>
+
+      <h3>Biblioteca</h3>
+      <div class="row" style="margin-top:0;margin-bottom:12px">
+        <input id="m-filtro" placeholder="Filtrar por nombre o materia…" oninput="renderMats()">
+        <button class="ghost" onclick="loadMats()">Recargar</button>
+        <a href="https://drive.google.com/drive/folders/1QDu5_chVuoaF2qCEuMwpnVpOGFKJhZcx" target="_blank" rel="noopener" style="margin-left:auto">Abrir carpeta en Drive</a>
+      </div>
+      <div id="mats"><div class="empty">Cargando biblioteca…</div></div>
+
+      <h3>Preguntar sobre un archivo</h3>
+      <div class="hint">El tutor lee el contenido real del archivo y responde citando lo que dice.</div>
+      <div class="row" style="margin-top:0">
+        <select id="m-sel" style="flex:1;min-width:220px"><option value="">— Elige un archivo —</option></select>
+      </div>
+      <div class="row">
+        <input id="m-q" placeholder="Ej: resume los puntos clave / hazme 5 preguntas de práctica">
+        <button id="btn-mat" onclick="askDoc()">Analizar</button>
+      </div>
+      <div class="chips">
+        <button class="chip" onclick="askDoc('Resume este documento en puntos clave, claro y breve.')">Resumen</button>
+        <button class="chip" onclick="askDoc('Extrae los conceptos y definiciones más importantes.')">Conceptos clave</button>
+        <button class="chip" onclick="askDoc('Hazme 5 preguntas de práctica con sus respuestas para estudiar esto.')">Autoevaluación</button>
+        <button class="chip" onclick="askDoc('Explícame lo más difícil de este documento de forma simple, con un ejemplo.')">Explícamelo fácil</button>
+      </div>
+      <div class="chat" id="chat-mat" style="max-height:300px"></div>
+    </section>
+  </div>
+
+  <!-- ========== SINCRONIZACIÓN ========== -->
+  <div class="pane" id="p-syn">
+    <section>
+      <h2>Estado de sincronización</h2>
+      <div class="hint">Controla qué se escribe automáticamente en tus cuentas de Google.</div>
+      <div class="row" style="margin-top:0">
+        <label class="ck"><input type="checkbox" id="ck-cal"> Sincronizar tareas y eventos con Google Calendar automáticamente</label>
+      </div>
+
+      <h3>Archivos en Drive</h3>
+      <div class="link-row"><span>Carpeta madre</span><a href="https://drive.google.com/drive/folders/1B5kvngwahE0iUlCvQ0b_kRi2nSX2zoC8" target="_blank" rel="noopener">EXAEL — Centro Académico</a></div>
+      <div class="link-row"><span>Hoja de horario</span><a href="https://docs.google.com/spreadsheets/d/13TZpYrQ_MUX8eSbDzRf-KqMd5QuqNiwsWbej4MTpwcU/edit" target="_blank" rel="noopener">Horario Semanal</a></div>
+      <div class="link-row"><span>Hoja de tareas</span><a href="https://docs.google.com/spreadsheets/d/1D0aAh1ksxCfKA_MBvUMt-_D39mYhOC885ZbQxtnkenc/edit" target="_blank" rel="noopener">Tareas y Entregas</a></div>
+      <div class="link-row"><span>Material de estudio</span><a href="https://drive.google.com/drive/folders/1QDu5_chVuoaF2qCEuMwpnVpOGFKJhZcx" target="_blank" rel="noopener">Biblioteca de archivos</a></div>
+
+      <h3>Acciones manuales</h3>
+      <div class="row" style="margin-top:0">
+        <button class="ghost" onclick="pushHorario()">Horario → Sheets</button>
+        <button class="ghost" onclick="pushTareas()">Tareas → Sheets</button>
+        <button class="ghost" onclick="syncAllCal()">Reenviar todo al Calendar</button>
+        <button class="ghost" onclick="loadGoogle()">Refrescar Google</button>
+      </div>
+
+      <h3>Copia de seguridad local</h3>
+      <div class="hint" style="margin-bottom:10px">Materias, horario, tareas, simulacros y chat viven en este navegador. Usa el respaldo para pasarlos al celular. Descarga un respaldo antes de limpiar datos o cambiar de equipo.</div>
+      <div class="row" style="margin-top:0">
+        <button class="ghost" onclick="exportBackup()">Descargar respaldo (.json)</button>
+        <button class="ghost" onclick="document.getElementById('f-restore').click()">Restaurar respaldo</button>
+        <input type="file" id="f-restore" accept="application/json,.json" style="display:none">
+      </div>
+
+      <h3>Configuración web</h3>
+      <div class="hint"><b>Opcional.</b> Solo si conseguiste credenciales de Google Cloud. Sin esto la app funciona igual, pero sin Calendar, Drive ni tutor. Pasos en <b>GUIA-PUBLICAR.md</b>.</div>
+      <div class="row" style="margin-top:0">
+        <input id="cfg-client" placeholder="Client ID de Google (…apps.googleusercontent.com)">
+      </div>
+      <div class="row">
+        <select id="cfg-prov" style="max-width:210px" onchange="pintarModelos()"></select>
+        <select id="cfg-modelo" style="max-width:230px"></select>
+      </div>
+      <div class="row">
+        <input id="cfg-ia" type="password" placeholder="Clave de la IA (se guarda solo en este dispositivo)">
+        <button class="ghost" onclick="probarIA()">Probar</button>
+      </div>
+      <div class="row">
+        <button onclick="guardarCfgWeb()">Guardar configuración</button>
+        <button class="ghost" onclick="entrarGoogle()">Iniciar sesión con Google</button><button class="ghost" onclick="mostrarAviso()">Mostrar aviso de modo local</button>
+        <button class="ghost" onclick="salirGoogle()">Cerrar sesión de Google</button>
+      </div>
+      <div class="hint" id="cfg-estado" style="margin-top:9px"></div>
+
+      <h3>Llevar EXAEL al celular</h3>
+      <div class="hint">Sube una copia de la app a tu Google Drive. Desde el celular la descargas, la abres en el navegador y la agregas a la pantalla de inicio. En el teléfono funciona en modo local: materias, horario, tareas y simulacros guardados; sin Calendar, Drive ni tutor.</div>
+      <div class="row" style="margin-top:0"><button onclick="subirApp()">Subir la app a mi Drive</button><button class="ghost" onclick="exportBackup()">Descargar mis datos (.json)</button></div>
+      <div class="hint" id="app-link" style="margin-top:10px"></div>
+
+      <h3>Acceso y privacidad</h3>
+      <div class="hint">La contraseña impide que alguien abra la app y vea tus datos de un vistazo. No cifra la información: quien tenga acceso al navegador de esta computadora podría leerla igual.</div>
+      <div class="row" style="margin-top:0"><button class="ghost" onclick="bloquear()">Bloquear ahora</button><button class="ghost" onclick="cambiarPin()">Cambiar contraseña</button><button class="danger" onclick="quitarPin()">Quitar contraseña</button></div>
+
+      <h3>Diagnóstico de conexión</h3>
+      <div class="hint">Prueba cada servicio uno por uno y te dice exactamente cuál falla y por qué.</div>
+      <div id="diag"><div class="empty">Sin ejecutar. Pulsa el botón para revisar el estado real de cada conexión.</div></div>
+      <div class="row"><button onclick="diagnostico()">Ejecutar diagnóstico</button><button class="ghost" onclick="reconectar()">Reintentar conexión</button></div>
+
+      <h3>Registro de actividad</h3>
+      <div class="log" id="log"></div>
+      <div class="hint" style="margin-top:14px">Las hojas de cálculo se escriben creando una <b>versión nueva con fecha</b> dentro de la carpeta: el conector de Drive no permite reescribir celdas de un archivo existente. El Calendar sí se actualiza sobre el mismo evento.</div>
+    </section>
+  </div>
+
+</div>
+<datalist id="dl-materias"></datalist>
+<div id="toast"></div>
+
+<script>
+/* ===== constantes ===== */
+const CAL='mcp__574fdca0-53ea-4f7c-81b4-bf821412b231__', DRV='mcp__17ee4cd8-dc52-455b-a28a-99130ec7e7fa__';
+const CAL_ID='villegasmejia321@gmail.com', FOLDER='1B5kvngwahE0iUlCvQ0b_kRi2nSX2zoC8', TZ='America/La_Paz';
+const MAT_FOLDER='1QDu5_chVuoaF2qCEuMwpnVpOGFKJhZcx';
+const KMT='exael_materias_v1', KSM='exael_simulacros_v1';
+const KT='exael_tasks_v2', KH='exael_horario_v2', KS='exael_sync_v1',
+      KC='exael_chat_v1', KG='exael_hor_gids_v1', KTAB='exael_tab_v1';
+const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
+const get=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch(e){return d}};
+const set=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const esc=s=>String(s??'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const escA=s=>esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const pad=n=>String(n).padStart(2,'0');
+const uid=p=>p+Math.random().toString(36).slice(2,9);
+/* CSV: comillas + blindaje contra inyección de fórmulas en Sheets */
+const csvq=s=>{let v=String(s??'');if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+
+const BASE=[['06:00–07:00','Preparación','Preparación','Preparación','Preparación','Preparación'],
+ ['08:00–09:20','','','','',''],['09:20–10:40','','','','',''],
+ ['10:40–11:00','Recreo','Recreo','Recreo','Recreo','Recreo'],
+ ['11:00–12:15','','','','',''],['12:15–13:15','','','','',''],
+ ['14:30–16:30','Estudio','Estudio','Estudio','Estudio','Estudio'],
+ ['17:00–18:30','Deporte','Deporte','Deporte','Deporte','Deporte'],
+ ['18:30–20:00','Libre','Libre','Libre','Libre','Libre'],
+ ['20:00–21:00','Ejercicio','Ejercicio','Ejercicio','Ejercicio','Ejercicio']];
+
+/* ===== estado ===== */
+let tasks=get(KT,[]), grid=get(KH,null)||BASE.map(r=>r.slice()), gEvents=[];
+let autoSync=get(KS,true), chat=get(KC,[]), chatMat=[], mats=[];
+let editId=null, filtro='todas';
+let materias=get(KMT,[]), simHist=get(KSM,[]);
+let mtEditId=null, quiz=null, quizResp=[], quizCorregido=false;
+let migrated=false;
+tasks.forEach(t=>{if(!t.id){t.id=uid('t');migrated=true;}});
+if(migrated) set(KT,tasks);
+
+/* ===== puente de Cowork =====
+   Cowork puede inyectar window.cowork DESPUÉS de que corra este script, así que
+   la disponibilidad se consulta en cada llamada — nunca se congela en una constante. */
+const hasMcp=()=>!!(window.cowork&&typeof window.cowork.callMcpTool==='function');
+const hasAI =()=>!!(window.cowork&&typeof window.cowork.askClaude==='function');
+function esperarPuente(intentos){
+ return new Promise(res=>{
+  if(hasMcp())return res(true);
+  let n=0;const t=setInterval(()=>{
+   if(hasMcp()){clearInterval(t);res(true);}
+   else if(++n>=(intentos||60)){clearInterval(t);res(false);}   /* 60 × 250 ms = 15 s */
+  },250);
+ });
+}
+async function conectar(intentos){
+ const ok=await esperarPuente(intentos);
+ document.getElementById('no-bridge').style.display=(ok||avisoOculto())?'none':'';
+ if(ok){
+  log('Conectado con Google Calendar y Drive.','ok');
+  await Promise.all([loadGoogle(),loadMats()]);
+ }else{
+  log('No se encontró el puente de Cowork: Calendar y Drive deshabilitados.','er');
+  renderEvents();renderMats();
+ }
+ return ok;
+}
+window.reconectar=reconectar;
+async function reconectar(){
+ log('Reintentando conexión…','in');
+ const ok=await conectar(12);                                    /* 3 s en el reintento manual */
+ toast(ok?'Conectado con Google':'Sigue sin haber conexión con Google',!ok);
+}
+
+document.getElementById('ck-cal').checked=autoSync;
+document.getElementById('ck-cal').addEventListener('change',e=>{
+ autoSync=e.target.checked;set(KS,autoSync);
+ log(autoSync?'Sincronización automática activada':'Sincronización automática desactivada',autoSync?'ok':'in');});
+document.getElementById('today').textContent=new Date().toLocaleDateString('es-BO',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+/* ===== utilidades ===== */
+function log(m,c){const l=document.getElementById('log');const d=document.createElement('div');
+ d.className=c||'';d.textContent='['+new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'})+'] '+m;
+ l.insertBefore(d,l.firstChild);
+ while(l.children.length>120) l.removeChild(l.lastChild);}
+let tt;
+function toast(m,err){const t=document.getElementById('toast');t.textContent=m;t.className='on'+(err?' err':'');
+ clearTimeout(tt);tt=setTimeout(()=>t.className='',3400);}
+async function mcp(tool,args){
+ if(!hasMcp()) throw new Error('sin conexión con Google (abre la app dentro de Cowork)');
+ const r=await window.cowork.callMcpTool(tool,args);
+ if(r.isError) throw new Error((r.content&&r.content[0]&&r.content[0].text)||'error');
+ return r.structuredContent??JSON.parse(r.content[0].text);
+}
+/* fecha/hora local: el Calendar la interpreta con TZ, sin pasar por UTC */
+const fechaLocal=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const isoLocal=d=>fechaLocal(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':00';
+function fechaValida(d){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(d||''))return false;
+ const y=parseInt(d.slice(0,4),10);return y>=2024&&y<=2035;
+}
+/* fin = inicio + duración, respetando minutos y sin salirse del día */
+function rangoEvento(fecha,hora,horas){
+ const [h,m]=(hora||'20:00').split(':').map(n=>parseInt(n,10)||0);
+ const ini=new Date(fecha+'T'+pad(h)+':'+pad(m)+':00');
+ let fin=new Date(ini.getTime()+Math.max(.25,horas||1)*3600000);
+ const tope=new Date(fecha+'T23:59:00');
+ if(fin>tope) fin=tope;
+ if(fin<=ini) fin=new Date(ini.getTime()+15*60000);
+ return {start:isoLocal(ini),end:isoLocal(fin)};
+}
+/* markdown mínimo para las respuestas del tutor */
+function md(s){
+ let h=esc(s);
+ h=h.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+ h=h.replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
+ h=h.replace(/(^|[\s(])\*([^*\n]+)\*/g,'$1<i>$2</i>');
+ h=h.replace(/^\s{0,3}#{1,6}\s*(.+)$/gm,'<b>$1</b>');
+ h=h.replace(/^\s{0,3}[-*]\s+/gm,'• ');
+ return h;
+}
+const textoIA=res=>typeof res==='string'?res:((res&&(res.text||res.content||res.response))||JSON.stringify(res));
+
+/* ===== pestañas ===== */
+const tabEls=[...document.querySelectorAll('.tab')];
+function showTab(name){
+ tabEls.forEach(x=>{const on=x.dataset.p===name;x.classList.toggle('on',on);x.setAttribute('aria-selected',on);});
+ document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+ const p=document.getElementById('p-'+name); if(p) p.classList.add('on');
+ set(KTAB,name);
+}
+tabEls.forEach((t,i)=>{
+ t.addEventListener('click',()=>showTab(t.dataset.p));
+ t.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();
+   const n=tabEls[(i+(e.key==='ArrowRight'?1:tabEls.length-1))%tabEls.length];
+   n.focus();showTab(n.dataset.p);}
+ });
+});
+
+/* ===== horario ===== */
+function tipo(t){const s=(t||'').toLowerCase();
+ if(!s.trim())return 't-libre';
+ if(s.includes('examen')||s.includes('parcial')||s.includes('entrega'))return 't-examen';
+ if(s.includes('estudio')||s.includes('repas'))return 't-estudio';
+ if(/deporte|ejercicio|gym|basquet|básquet|baloncesto|entrenamiento/.test(s))return 't-deporte';
+ if(/libre|recreo|almuerzo|preparación|preparacion|dormir|traslado/.test(s))return 't-libre';
+ return 't-clase';}
+/* "08:00–09:20" -> minutos desde medianoche; null si no se puede leer */
+function franjaMin(f){
+ const m=String(f||'').match(/(\d{1,2}):(\d{2}).*?(\d{1,2}):(\d{2})/);
+ if(!m)return null;
+ return {ini:+m[1]*60+ +m[2], fin:+m[3]*60+ +m[4], h:[m[1],m[2],m[3],m[4]]};
+}
+function renderGrid(){
+ const t=document.getElementById('tbl-h');
+ let h='<tr><th>Hora</th>'+DIAS.map((d,j)=>'<th data-c="'+(j+1)+'">'+d+'</th>').join('')+'<th></th></tr>';
+ grid.forEach((r,i)=>{h+='<tr data-r="'+i+'">';
+  r.forEach((c,j)=>{h+='<td data-c="'+j+'" class="'+(j===0?'hora':'')+'"><div class="cell '+(j===0?'':tipo(c))+'" contenteditable spellcheck="false" data-r="'+i+'" data-c="'+j+'">'+esc(c)+'</div></td>';});
+  h+='<td><button class="x" title="Borrar franja" onclick="delRow('+i+')">&times;</button></td></tr>';});
+ t.innerHTML=h;
+ /* actualización en vivo: sin re-render, así no se pierde el foco ni el clic siguiente */
+ t.querySelectorAll('.cell').forEach(el=>{
+  el.addEventListener('input',()=>{
+   const v=el.textContent.trim(), r=+el.dataset.r, c=+el.dataset.c;
+   grid[r][c]=v;
+   if(c>0) el.className='cell '+tipo(v);
+   saveGrid();
+  });
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();el.blur();}});
+ });
+ paintNow();stats();
+}
+let sg;
+function saveGrid(){clearTimeout(sg);sg=setTimeout(()=>{set(KH,grid);stats();},400);}
+/* resalta la columna de hoy y la franja en curso */
+function paintNow(){
+ const t=document.getElementById('tbl-h'); if(!t)return;
+ const now=new Date(), dow=(now.getDay()+6)%7, min=now.getHours()*60+now.getMinutes();
+ const col=dow<5?dow+1:null;
+ t.querySelectorAll('th,td').forEach(el=>el.classList.remove('today'));
+ if(col!==null) t.querySelectorAll('[data-c="'+col+'"]').forEach(el=>el.classList.add('today'));
+ let actual=null;
+ t.querySelectorAll('tr[data-r]').forEach(tr=>{
+  const f=franjaMin(grid[+tr.dataset.r][0]);
+  const on=!!f&&min>=f.ini&&min<f.fin;
+  tr.classList.toggle('now',on);
+  if(on&&col!==null) actual=grid[+tr.dataset.r][col]||'—';
+ });
+ const a=document.getElementById('ahora');
+ if(col===null) a.innerHTML='<span class="k">Ahora</span>Fin de semana — sin bloques de horario.';
+ else a.innerHTML='<span class="k">Ahora</span>'+DIAS[dow]+' · <b>'+esc(actual||'fuera de horario')+'</b>';
+}
+function addRow(){
+ const inp=document.getElementById('h-hora'), h=inp.value.trim();
+ if(h&&!franjaMin(h)) return toast('Formato de franja no válido. Usa 16:30–18:00',1);
+ grid.push([h||'--:--','','','','','']);set(KH,grid);inp.value='';renderGrid();toast('Franja agregada');
+}
+function delRow(i){
+ const r=grid[i]; if(!r) return;
+ if(r.slice(1).some(c=>c.trim())&&!confirm('Esta franja tiene contenido. ¿Borrarla igual?'))return;
+ grid.splice(i,1);set(KH,grid);renderGrid();toast('Franja borrada');
+}
+function clearGrid(){if(confirm('¿Vaciar todo el horario?')){grid=grid.map(r=>[r[0],'','','','','']);set(KH,grid);renderGrid();}}
+function resetGrid(){if(confirm('¿Restaurar el horario base?')){grid=BASE.map(r=>r.slice());set(KH,grid);renderGrid();}}
+
+/* ===== tareas ===== */
+function daysLeft(d){return d?Math.ceil((new Date(d+'T23:59:00')-new Date())/86400000):null;}
+function esUrgente(t){const d=daysLeft(t.date);return !t.done&&d!==null&&d<=3;}
+function setFiltro(f){filtro=f;document.querySelectorAll('[data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderTasks();}
+function ordenTareas(a,b){
+ if(a.done!==b.done) return a.done?1:-1;
+ if(!a.date&&!b.date) return 0;
+ if(!a.date) return 1;            /* sin fecha van al final, no al principio */
+ if(!b.date) return -1;
+ return String(a.date).localeCompare(String(b.date));
+}
+function renderTasks(){
+ const b=document.getElementById('tasks');
+ tasks.sort(ordenTareas);
+ const q=(document.getElementById('t-filtro').value||'').toLowerCase();
+ const list=tasks.filter(t=>{
+  if(q&&!((t.name||'')+' '+(t.mat||'')+' '+(t.desc||'')).toLowerCase().includes(q))return false;
+  if(filtro==='pend')return !t.done;
+  if(filtro==='done')return !!t.done;
+  if(filtro==='urg')return esUrgente(t);
+  return true;
+ });
+ if(!list.length){
+  b.innerHTML='<div class="empty">'+(tasks.length?'Ninguna ficha coincide con el filtro.':'Sin tareas registradas. Crea la primera abajo.')+'</div>';
+ }else{
+  b.innerHTML=list.map(t=>{
+   const dl=daysLeft(t.date),urg=esUrgente(t);
+   let lbl='Sin fecha';
+   if(t.date){const f=new Date(t.date+'T12:00:00').toLocaleDateString('es-BO',{day:'numeric',month:'short'});
+    lbl=t.done?f                                    /* ya entregada: la fecha basta */
+      :dl<0?f+' · vencida':dl===0?f+' · hoy':dl===1?f+' · mañana':f+' · faltan '+dl+' días';}
+   const id=escA(t.id);
+   const estado=t.done?'<span class="badge b-done">Completada</span>'
+              :urg?'<span class="badge b-urg">Urgente</span>'
+                  :'<span class="badge b-pend">Pendiente</span>';
+   return '<div class="card '+(t.done?'done':urg?'urgent':'')+(t.id===editId?' editing':'')+'">'+
+    '<div class="chead"><span class="ctitle">'+esc(t.name)+'</span>'+estado+
+    (t.gid?'<span class="badge b-mute">Calendar</span>':'')+'</div>'+
+    '<div class="d">'+(esc(t.desc)||'<i>Sin consigna</i>')+'</div>'+
+    '<div class="meta">'+
+     '<span><span class="k">Materia</span><b>'+(esc(t.mat)||'—')+'</b></span>'+
+     '<span><span class="k">Entrega</span><b>'+lbl+'</b></span>'+
+     (t.time?'<span><span class="k">Hora</span><b>'+esc(t.time)+'</b></span>':'')+
+     '<span><span class="k">Puntaje</span><b>'+(esc(t.pts)||'—')+'</b></span>'+
+    '</div>'+
+    '<div class="row"><button class="ghost" onclick="toggle(\''+id+'\')">'+(t.done?'Reabrir':'Completar')+'</button>'+
+    '<button class="ghost" onclick="startEdit(\''+id+'\')">Editar</button>'+
+    '<button class="danger" onclick="delT(\''+id+'\')">Eliminar</button></div></div>';}).join('');
+ }
+ stats();
+}
+const byId=id=>tasks.find(t=>t.id===id);
+const leerForm=()=>({name:document.getElementById('i-name').value.trim(),
+ desc:document.getElementById('i-desc').value.trim(),
+ mat:document.getElementById('i-mat').value.trim(),
+ date:document.getElementById('i-date').value,
+ time:document.getElementById('i-time').value||'20:00',
+ pts:document.getElementById('i-pts').value.trim()});
+function limpiarForm(){
+ ['i-name','i-desc','i-mat','i-date','i-pts'].forEach(id=>document.getElementById(id).value='');
+ document.getElementById('i-time').value='20:00';
+}
+function startEdit(id){
+ const t=byId(id); if(!t)return;
+ editId=id;
+ document.getElementById('i-name').value=t.name||'';
+ document.getElementById('i-desc').value=t.desc||'';
+ document.getElementById('i-mat').value=t.mat||'';
+ document.getElementById('i-date').value=t.date||'';
+ document.getElementById('i-time').value=t.time||'20:00';
+ document.getElementById('i-pts').value=t.pts||'';
+ document.getElementById('form-title').textContent='Editando: '+t.name;
+ document.getElementById('btn-save').textContent='Guardar cambios';
+ document.getElementById('btn-cancel').style.display='';
+ renderTasks();
+ document.getElementById('i-name').focus();
+}
+function cancelEdit(){
+ editId=null;limpiarForm();
+ document.getElementById('form-title').textContent='Nueva ficha';
+ document.getElementById('btn-save').textContent='Crear ficha';
+ document.getElementById('btn-cancel').style.display='none';
+ renderTasks();
+}
+async function saveTask(){
+ const f=leerForm();
+ if(!f.name) return toast('Falta el nombre de la tarea',1);
+ if(f.date&&!fechaValida(f.date)) return toast('Fecha inválida: '+f.date,1);
+ if(editId){
+  const t=byId(editId); if(!t) return cancelEdit();
+  const cambióFecha=t.date!==f.date||t.time!==f.time;
+  Object.assign(t,f);set(KT,tasks);
+  cancelEdit();toast('Ficha actualizada');
+  if(autoSync&&t.date){
+   if(t.gid) await calUpdateTask(t,cambióFecha); else await calCreateForTask(t);
+  }else if(t.gid&&!t.date){
+   log('La ficha "'+t.name+'" se quedó sin fecha; su evento sigue en el Calendar','in');
+  }
+ }else{
+  const t=Object.assign({id:uid('t'),done:false,gid:null},f);
+  tasks.push(t);set(KT,tasks);limpiarForm();renderTasks();toast('Ficha creada');
+  if(autoSync&&t.date) await calCreateForTask(t);
+ }
+}
+const tituloEvento=t=>(t.done?'Entrega completada: ':'Entrega: ')+t.name;
+const descEvento=t=>(t.desc||'')+(t.mat?'\nMateria: '+t.mat:'')+(t.pts?'\nPuntaje: '+t.pts:'');
+async function calCreateForTask(t){
+ if(!fechaValida(t.date)){
+  log('Fecha inválida en "'+t.name+'": '+t.date+' — no se envió al Calendar','er');
+  toast('Fecha inválida ('+t.date+'). Corrígela y reintenta',1);return;
+ }
+ try{
+  const {start,end}=rangoEvento(t.date,t.time,1);
+  const r=await mcp(CAL+'create_event',{calendarId:CAL_ID,summary:tituloEvento(t),description:descEvento(t),
+   startTime:start,endTime:end,timeZone:TZ,colorId:'11',
+   overrideReminders:[{method:'popup',minutes:1440},{method:'popup',minutes:120}]});
+  t.gid=r.id;set(KT,tasks);renderTasks();
+  log('Entrega creada en Calendar: '+t.name,'ok');toast('Sincronizado con Calendar');loadGoogle();
+ }catch(e){log('Error al crear la entrega en Calendar: '+e.message,'er');toast('No se pudo sincronizar',1);}
+}
+async function calUpdateTask(t,conFecha){
+ try{
+  const a={calendarId:CAL_ID,eventId:t.gid,notificationLevel:'NONE',
+   summary:tituloEvento(t),description:descEvento(t),colorId:t.done?'2':'11'};
+  if(conFecha&&fechaValida(t.date)){
+   const {start,end}=rangoEvento(t.date,t.time,1);
+   a.startTime=start;a.endTime=end;a.timeZone=TZ;
+  }
+  await mcp(CAL+'update_event',a);
+  log('Evento actualizado en Calendar: '+t.name,'ok');loadGoogle();
+ }catch(e){log('No se pudo actualizar el evento: '+e.message,'er');toast('No se pudo actualizar en Calendar',1);}
+}
+async function toggle(id){
+ const t=byId(id); if(!t)return;
+ t.done=!t.done;set(KT,tasks);renderTasks();
+ if(t.gid&&autoSync) await calUpdateTask(t,false);
+}
+async function delT(id){
+ const t=byId(id); if(!t)return;
+ if(!confirm('¿Eliminar la ficha "'+t.name+'"'+(t.gid?' y su evento del Calendar':'')+'?'))return;
+ tasks=tasks.filter(x=>x.id!==id);set(KT,tasks);
+ if(editId===id) cancelEdit(); else renderTasks();
+ if(t.gid){try{await mcp(CAL+'delete_event',{calendarId:CAL_ID,eventId:t.gid,notificationLevel:'NONE'});
+  log('Evento borrado del Calendar: '+t.name,'ok');toast('Borrado aquí y en Calendar');loadGoogle();
+ }catch(e){log('No se pudo borrar del Calendar: '+e.message,'er');}}
+}
+
+/* ===== eventos ===== */
+function renderEvents(){
+ const b=document.getElementById('events');
+ const all=gEvents.map(e=>({n:e.summary||'(sin título)',w:e.start&&(e.start.dateTime||e.start.date),id:e.id}))
+  .filter(e=>e.w).sort((a,c)=>String(a.w).localeCompare(String(c.w)));
+ document.getElementById('s-ev').textContent=all.length||'—';
+ if(!all.length){
+  b.innerHTML='<div class="empty">'+(hasMcp()?'No hay eventos en los próximos 7 días. Agrega uno abajo.':'Sin conexión con Google Calendar.')+'</div>';
+  return;
+ }
+ const hoy=fechaLocal(new Date()), man=fechaLocal(new Date(Date.now()+86400000));
+ const grupos=new Map();
+ all.forEach(e=>{const k=String(e.w).slice(0,10);if(!grupos.has(k))grupos.set(k,[]);grupos.get(k).push(e);});
+ let h='';
+ grupos.forEach((evs,k)=>{
+  const et=k===hoy?'Hoy':k===man?'Mañana':new Date(k+'T12:00:00').toLocaleDateString('es-BO',{weekday:'long',day:'numeric',month:'short'});
+  h+='<div class="daygroup"><div class="dayhead'+(k===hoy?' hoy':'')+'">'+esc(et)+'</div>'+
+   evs.map(e=>{
+    const hora=String(e.w).length>10?new Date(e.w).toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'}):'Todo el día';
+    return '<div class="ev"><span>'+esc(e.n)+'<span class="src">Google</span></span>'+
+     '<span class="when">'+esc(hora)+' <button class="x" title="Borrar del Calendar" onclick="delGEvent(\''+escA(e.id)+'\')">&times;</button></span></div>';
+   }).join('')+'</div>';
+ });
+ b.innerHTML=h;
+}
+async function addEvent(){
+ const n=document.getElementById('e-name').value.trim(),d=document.getElementById('e-date').value,
+  h=document.getElementById('e-time').value||'08:00',du=parseInt(document.getElementById('e-dur').value,10)||1;
+ if(!n||!d)return toast('Falta nombre o fecha',1);
+ if(!fechaValida(d))return toast('Fecha inválida: '+d,1);
+ try{
+  const {start,end}=rangoEvento(d,h,du);
+  await mcp(CAL+'create_event',{calendarId:CAL_ID,summary:n,startTime:start,endTime:end,timeZone:TZ,colorId:'7'});
+  ['e-name','e-date','e-time'].forEach(id=>document.getElementById(id).value='');
+  log('Evento creado en Calendar: '+n+' ('+start.slice(11,16)+'–'+end.slice(11,16)+')','ok');
+  toast('Evento guardado en Google Calendar');loadGoogle();
+ }catch(e){log('Error creando el evento: '+e.message,'er');toast('No se pudo crear',1);}
+}
+async function delGEvent(id){
+ if(!confirm('¿Borrar este evento de tu Google Calendar?'))return;
+ try{await mcp(CAL+'delete_event',{calendarId:CAL_ID,eventId:id,notificationLevel:'NONE'});
+  log('Evento borrado del Calendar','ok');toast('Evento borrado');
+  const t=tasks.find(x=>x.gid===id); if(t){t.gid=null;set(KT,tasks);renderTasks();}
+  const g=get(KG,null); if(g&&g.ids&&g.ids.includes(id)){g.ids=g.ids.filter(x=>x!==id);set(KG,g);paintUndo();}
+  loadGoogle();
+ }catch(e){log('No se pudo borrar: '+e.message,'er');toast('No se pudo borrar',1);}
+}
+async function loadGoogle(){
+ if(!hasMcp()){gEvents=[];renderEvents();return;}
+ try{const now=new Date(),end=new Date(now.getTime()+7*86400000);
+  const d=await mcp(CAL+'list_events',{calendarId:CAL_ID,orderBy:'startTime',pageSize:50,
+   startTime:now.toISOString(),endTime:end.toISOString()});
+  gEvents=d.events||[];log('Calendar leído: '+gEvents.length+' evento(s)','in');
+ }catch(e){gEvents=[];log('No se pudo leer el Calendar: '+e.message,'er');}
+ renderEvents();
+}
+
+/* ===== sync a Sheets ===== */
+async function pushSheet(title,csv){
+ const stamp=new Date().toISOString().slice(0,16).replace('T',' ');
+ try{const r=await mcp(DRV+'create_file',{title:title+' — '+stamp,contentMimeType:'text/csv',parentId:FOLDER,textContent:csv});
+  log('Hoja creada: '+r.title,'ok');toast('Hoja creada en Drive');
+  if(r.viewUrl&&!window.open(r.viewUrl,'_blank','noopener'))
+   log('El navegador bloqueó la ventana. Ábrela desde la carpeta de Drive.','in');
+ }catch(e){log('Error creando la hoja: '+e.message,'er');toast('No se pudo crear la hoja',1);}
+}
+function pushHorario(){
+ pushSheet('Horario Semanal',['Hora,'+DIAS.join(','),...grid.map(r=>r.map(csvq).join(','))].join('\n'));
+}
+function pushTareas(){
+ if(!tasks.length)return toast('No hay tareas que enviar',1);
+ pushSheet('Tareas y Entregas',['Tarea,Consigna,Materia,Fecha de entrega,Hora,Puntaje,Estado,Días restantes',
+  ...tasks.map(t=>[t.name,t.desc,t.mat,t.date,t.time,t.pts,t.done?'Completada':'Pendiente',daysLeft(t.date)??''].map(csvq).join(','))].join('\n'));
+}
+async function syncAllCal(){
+ const pend=tasks.filter(t=>t.date&&!t.gid);
+ if(!pend.length)return toast('Todo ya está sincronizado');
+ let ok=0;
+ for(const t of pend){await calCreateForTask(t); if(t.gid) ok++;}
+ toast(ok+' de '+pend.length+' tarea(s) enviadas al Calendar',ok<pend.length);
+}
+/* volcado del horario: guarda los ids creados para poder deshacer */
+async function pushHorarioCal(){
+ const previo=get(KG,null);
+ if(previo&&previo.ids&&previo.ids.length&&
+    !confirm('Ya volcaste el horario el '+previo.stamp+' ('+previo.ids.length+' bloques).\nSi continúas quedarán duplicados. ¿Seguir igual?'))return;
+ if(!confirm('Esto creará un evento en tu Google Calendar por cada clase de esta semana. ¿Continuar?'))return;
+ const now=new Date(),mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));mon.setHours(12,0,0,0);
+ const ids=[];let fallos=0;
+ for(let i=0;i<grid.length;i++){
+  const f=franjaMin(grid[i][0]); if(!f)continue;
+  for(let j=1;j<=5;j++){
+   const txt=grid[i][j];if(!txt||tipo(txt)==='t-libre')continue;
+   const d=new Date(mon);d.setDate(mon.getDate()+(j-1));
+   const ds=fechaLocal(d);           /* fecha local: sin desfase por UTC */
+   try{const r=await mcp(CAL+'create_event',{calendarId:CAL_ID,summary:txt,
+     startTime:ds+'T'+pad(f.h[0])+':'+f.h[1]+':00',endTime:ds+'T'+pad(f.h[2])+':'+f.h[3]+':00',
+     timeZone:TZ,colorId:tipo(txt)==='t-estudio'?'10':tipo(txt)==='t-deporte'?'3':'1',
+     availability:'AVAILABILITY_BUSY',notificationLevel:'NONE'});
+    if(r&&r.id) ids.push(r.id);
+   }catch(e){fallos++;}
+  }
+ }
+ set(KG,{stamp:new Date().toLocaleString('es-BO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),ids});
+ paintUndo();
+ log(ids.length+' bloques del horario volcados al Calendar'+(fallos?' ('+fallos+' fallaron)':''),fallos?'er':'ok');
+ toast(ids.length+' bloques creados en Calendar');loadGoogle();
+}
+async function undoHorarioCal(){
+ const g=get(KG,null); if(!g||!g.ids||!g.ids.length)return;
+ if(!confirm('Se borrarán del Calendar los '+g.ids.length+' bloques creados el '+g.stamp+'. ¿Continuar?'))return;
+ let ok=0;
+ for(const id of g.ids){
+  try{await mcp(CAL+'delete_event',{calendarId:CAL_ID,eventId:id,notificationLevel:'NONE'});ok++;}catch(e){}
+ }
+ set(KG,null);paintUndo();
+ log(ok+' bloques del horario borrados del Calendar','ok');toast(ok+' bloques borrados');loadGoogle();
+}
+function paintUndo(){
+ const g=get(KG,null), b=document.getElementById('btn-undo-hor'), h=document.getElementById('hint-undo');
+ const hay=!!(g&&g.ids&&g.ids.length);
+ b.style.display=hay?'':'none';
+ h.textContent=hay?'Último volcado: '+g.stamp+' — '+g.ids.length+' bloques en el Calendar.':'';
+}
+
+/* ===== indicadores ===== */
+function stats(){
+ document.getElementById('s-pend').textContent=tasks.filter(t=>!t.done).length;
+ document.getElementById('s-done').textContent=tasks.filter(t=>t.done).length;
+ document.getElementById('s-urg').textContent=tasks.filter(esUrgente).length;
+ /* horas reales de estudio: suma la duración de cada franja marcada como estudio */
+ let min=0;
+ grid.forEach(r=>{const f=franjaMin(r[0]);if(!f)return;
+  r.slice(1).forEach(c=>{if(tipo(c)==='t-estudio')min+=Math.max(0,f.fin-f.ini);});});
+ const hrs=min/60;
+ document.getElementById('s-hrs').textContent=hrs?(hrs%1?hrs.toFixed(1):hrs.toFixed(0)):'0';
+}
+
+/* ===== tutor ===== */
+function renderChat(){const b=document.getElementById('chat');
+ if(!chat.length){b.innerHTML='<div class="empty">Sin conversación aún. Usa uno de los atajos de abajo o escribe tu pregunta.</div>';return;}
+ b.innerHTML=chat.map(m=>'<div class="msg '+(m.r==='u'?'u':'a')+'"><div class="who">'+(m.r==='u'?'Tú':'Tutor')+'</div><div class="bubble">'+(m.r==='u'?esc(m.t):md(m.t))+'</div></div>').join('');
+ b.scrollTop=b.scrollHeight;}
+function saveChat(){set(KC,chat.slice(-40));}
+function clearChat(){chat=[];saveChat();renderChat();}
+document.getElementById('q').addEventListener('keydown',e=>{
+ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();ask();}
+});
+async function ask(preset){
+ const inp=document.getElementById('q'),q=(preset||inp.value).trim();if(!q)return;
+ if(!hasAI())return toast('El tutor solo funciona con la app abierta dentro de Cowork',1);
+ inp.value='';chat.push({r:'u',t:q},{r:'a',t:'Pensando…'});renderChat();
+ const btn=document.getElementById('btn-ask');btn.disabled=true;
+ const ctx={fecha_hoy:fechaLocal(new Date()),
+  hora_ahora:new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'}),
+  horario:grid.map(r=>({franja:r[0],lunes:r[1],martes:r[2],miercoles:r[3],jueves:r[4],viernes:r[5]})),
+  tareas:tasks.map(t=>({tarea:t.name,consigna:t.desc,materia:t.mat,entrega:t.date,hora:t.time,puntaje:t.pts,estado:t.done?'completada':'pendiente',dias_restantes:daysLeft(t.date)})),
+  eventos_calendar:gEvents.map(e=>({titulo:e.summary,inicio:e.start&&(e.start.dateTime||e.start.date)})),
+  material_en_drive:mats.map(f=>f.title)};
+ /* últimos turnos para que el tutor no pierda el hilo */
+ const historial=chat.slice(0,-2).slice(-6).map(m=>(m.r==='u'?'Exael: ':'Tutor: ')+m.t).join('\n');
+ try{
+  const res=await window.cowork.askClaude(
+   'Eres el tutor académico personal de Exael (estudiante en Bolivia). Responde en español, directo, concreto y motivador, máximo 200 palabras. Usa los datos reales entregados. Si faltan datos, dilo y pide lo mínimo. No inventes materias ni fechas. No uses emojis.'+
+   (historial?'\n\nConversación previa:\n'+historial:'')+'\n\nPregunta: '+q,[ctx]);
+  chat[chat.length-1]={r:'a',t:textoIA(res)};
+ }catch(e){chat[chat.length-1]={r:'a',t:'No pude responder ahora. Intenta de nuevo en unos segundos.'};}
+ saveChat();btn.disabled=false;renderChat();
+}
+
+/* ===== material de estudio ===== */
+const drop=document.getElementById('drop'), fin=document.getElementById('f-in');
+drop.addEventListener('click',()=>fin.click());
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');handleFiles(e.dataTransfer.files)});
+fin.addEventListener('change',e=>{handleFiles(e.target.files);fin.value='';});
+
+/* etiqueta corta de formato, en lugar de un icono */
+function tipoArchivo(mt,name){
+ const m=((mt||'')+' '+(name||'')).toLowerCase();
+ if(m.includes('pdf'))return 'PDF';
+ if(m.includes('image')||/\.(png|jpe?g|gif|webp|heic)$/.test(m))return 'IMG';
+ if(m.includes('spreadsheet')||m.includes('excel')||/\.(xlsx?|csv)$/.test(m))return 'XLS';
+ if(m.includes('presentation')||m.includes('powerpoint'))return 'PPT';
+ if(m.includes('word')||m.includes('document')||/\.docx?$/.test(m))return 'DOC';
+ if(m.includes('video'))return 'VID';
+ if(m.includes('audio'))return 'AUD';
+ if(m.includes('folder'))return 'DIR';
+ return 'TXT';
+}
+function fmtSize(b){b=parseInt(b||0,10);if(!b)return '';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<3){b/=1024;i++}return b.toFixed(i?1:0)+' '+u[i];}
+
+async function handleFiles(files){
+ if(!files||!files.length)return;
+ if(!hasMcp())return toast('Subir archivos requiere la app abierta dentro de Cowork',1);
+ const box=document.getElementById('up-progress');
+ box.innerHTML='';                                   /* solo el lote actual */
+ const materia=document.getElementById('m-mat').value.trim();
+ const etiqueta=document.getElementById('m-tipo').value;
+ for(const f of files){
+  if(f.size>15*1024*1024){toast(f.name+' pesa más de 15 MB',1);log('Archivo muy grande: '+f.name,'er');continue;}
+  const id=uid('u');
+  box.insertAdjacentHTML('afterbegin','<div class="up-item" id="'+id+'">Subiendo <b>'+esc(f.name)+'</b> ('+fmtSize(f.size)+')…<div class="bar"><i style="width:35%"></i></div></div>');
+  try{
+   const b64=await new Promise((res,rej)=>{const r=new FileReader();
+    r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});
+   const bar=document.querySelector('#'+id+' .bar i'); if(bar) bar.style.width='70%';
+   const title='['+etiqueta+'] '+(materia?'['+materia+'] ':'')+f.name;
+   const r=await mcp(DRV+'create_file',{title:title,contentMimeType:f.type||'application/octet-stream',
+    parentId:MAT_FOLDER,base64Content:b64,disableConversionToGoogleType:true});
+   document.getElementById(id).innerHTML='Subido a Drive: <b>'+esc(f.name)+'</b>'+(r.viewUrl?' — <a href="'+escA(r.viewUrl)+'" target="_blank" rel="noopener">abrir</a>':'');
+   log('Material subido: '+title,'ok');toast(f.name+' guardado en Drive');
+  }catch(e){
+   document.getElementById(id).innerHTML='No se pudo subir <b>'+esc(f.name)+'</b>';
+   log('Error subiendo '+f.name+': '+e.message,'er');toast('Fallo al subir '+f.name,1);
+  }
+ }
+ loadMats();
+}
+
+async function loadMats(){
+ if(!hasMcp()){mats=[];renderMats();return;}
+ try{
+  const d=await mcp(DRV+'search_files',{query:"parentId = '"+MAT_FOLDER+"'",pageSize:60,excludeContentSnippets:true});
+  mats=d.files||[];
+  log('Biblioteca leída: '+mats.length+' archivo(s)','in');
+ }catch(e){mats=[];log('No se pudo leer la biblioteca: '+e.message,'er');}
+ renderMats();
+ const sel=document.getElementById('m-sel'), prev=sel.value;
+ sel.innerHTML='<option value="">— Elige un archivo —</option>'+
+  mats.map(f=>'<option value="'+escA(f.id)+'">'+esc(f.title)+'</option>').join('');
+ if(prev&&mats.some(f=>f.id===prev)) sel.value=prev;
+}
+function renderMats(){
+ const b=document.getElementById('mats');
+ const q=(document.getElementById('m-filtro').value||'').toLowerCase();
+ const list=mats.filter(f=>!q||(f.title||'').toLowerCase().includes(q));
+ if(!list.length){
+  b.innerHTML='<div class="empty">'+(mats.length?'Ningún archivo coincide con el filtro.':
+   (hasMcp()?'Biblioteca vacía. Sube tu primer PDF o apunte arriba.':'Sin conexión con Drive.'))+'</div>';
+  return;
+ }
+ b.innerHTML=list.map(f=>{
+  const fecha=f.modifiedTime?new Date(f.modifiedTime).toLocaleDateString('es-BO',{day:'numeric',month:'short',year:'numeric'}):'';
+  return '<div class="mat"><span class="ftype">'+tipoArchivo(f.mimeType,f.title)+'</span>'+
+   '<span class="info"><div class="nm">'+esc(f.title)+'</div><div class="sub">'+esc(fecha)+(f.fileSize?' · '+fmtSize(f.fileSize):'')+'</div></span>'+
+   (f.viewUrl?'<a href="'+escA(f.viewUrl)+'" target="_blank" rel="noopener">Abrir</a>':'')+
+   '<button class="ghost" onclick="pickDoc(\''+escA(f.id)+'\')">Analizar</button></div>';}).join('');
+}
+function pickDoc(id){
+ document.getElementById('m-sel').value=id;
+ document.getElementById('m-q').focus();
+ toast('Archivo seleccionado — escribe tu pregunta');
+}
+
+function renderChatMat(){
+ const b=document.getElementById('chat-mat');
+ if(!chatMat.length){b.innerHTML='<div class="empty">Elige un archivo y pregunta lo que quieras sobre él.</div>';return;}
+ b.innerHTML=chatMat.map(m=>'<div class="msg '+(m.r==='u'?'u':'a')+'"><div class="who">'+(m.r==='u'?'Tú':'Tutor')+'</div><div class="bubble">'+(m.r==='u'?esc(m.t):md(m.t))+'</div></div>').join('');
+ b.scrollTop=b.scrollHeight;
+}
+document.getElementById('m-q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();askDoc();}});
+async function askDoc(preset){
+ const id=document.getElementById('m-sel').value;
+ if(!id)return toast('Primero elige un archivo',1);
+ if(!hasAI())return toast('El tutor solo funciona con la app abierta dentro de Cowork',1);
+ const inp=document.getElementById('m-q'),q=(preset||inp.value).trim();
+ if(!q)return toast('Escribe una pregunta',1);
+ inp.value='';
+ const nombre=(mats.find(f=>f.id===id)||{}).title||'documento';
+ chatMat.push({r:'u',t:'['+nombre+'] '+q},{r:'a',t:'Leyendo el documento…'});renderChatMat();
+ const btn=document.getElementById('btn-mat');btn.disabled=true;
+ try{
+  const doc=await mcp(DRV+'read_file_content',{fileId:id});
+  const contenido=(doc.fileContent||doc.content||'').slice(0,60000);
+  if(!contenido) throw new Error('sin contenido legible');
+  chatMat[chatMat.length-1]={r:'a',t:'Analizando…'};renderChatMat();
+  const res=await window.cowork.askClaude(
+   'Eres el tutor académico de Exael. Responde SOLO con base en el documento entregado, en español, claro y concreto (máx 300 palabras). Si el documento no cubre la pregunta, dilo. Cita la sección o el tema del que sacas cada punto. No uses emojis.\n\nDocumento: '+nombre+'\nPregunta: '+q,
+   [{archivo:nombre,contenido:contenido}]);
+  chatMat[chatMat.length-1]={r:'a',t:textoIA(res)};
+  log('Documento analizado: '+nombre,'ok');
+ }catch(e){
+  chatMat[chatMat.length-1]={r:'a',t:'No pude leer ese archivo. Los formatos legibles son PDF, Word, Excel, PowerPoint, imágenes y documentos de Google. Videos y audios no se pueden analizar.'};
+  log('No se pudo analizar: '+e.message,'er');
+ }
+ btn.disabled=false;renderChatMat();
+}
+
+
+/* ===== materias ===== */
+
+function renderMaterias(){
+ const b=document.getElementById('materias');
+ if(!materias.length){
+  b.innerHTML='<div class="empty">Todavía no cargaste materias. Agrega la primera abajo: es lo que conecta tareas, material y simulacros.</div>';
+ }else{
+  b.innerHTML=materias.map(m=>{
+   const nT=tasks.filter(t=>(t.mat||'').toLowerCase()===m.nombre.toLowerCase());
+   const pend=nT.filter(t=>!t.done).length;
+   const sims=simHist.filter(x=>x.materia===m.nombre);
+   const prom=sims.length?Math.round(sims.reduce((a,c)=>a+c.pct,0)/sims.length)+'%':'—';
+   const temas=(m.temas||[]).length;
+   return '<div class="card"><div class="chead">'+
+     '<span class="ctitle">'+esc(m.nombre)+'</span>'+
+     (m.sigla?'<span class="badge b-mute">'+esc(m.sigla)+'</span>':'')+
+     (pend?'<span class="badge b-pend">'+pend+' pendiente'+(pend>1?'s':'')+'</span>':'')+
+     '</div>'+
+     '<div class="meta" style="margin-bottom:10px">'+
+      (m.doc?'<span><span class="k">Docente</span><b>'+esc(m.doc)+'</b></span>':'')+
+      (m.aula?'<span><span class="k">Aula</span><b>'+esc(m.aula)+'</b></span>':'')+
+      (m.cred?'<span><span class="k">Créditos</span><b>'+esc(m.cred)+'</b></span>':'')+
+      '<span><span class="k">Tareas</span><b>'+nT.length+'</b></span>'+
+      '<span><span class="k">Temas</span><b>'+temas+'</b></span>'+
+      '<span><span class="k">Promedio simulacros</span><b>'+prom+'</b></span>'+
+     '</div>'+
+     ((m.temas||[]).length?'<div class="d" style="margin-bottom:10px">'+m.temas.map(t=>'<span class="badge b-mute" style="margin-right:5px">'+esc(t)+'</span>').join('')+'</div>':'')+
+     '<div class="row" style="margin-top:0">'+
+      '<button class="ghost" onclick="simDesde(\''+m.id+'\')">Simulacro de esta materia</button>'+
+      '<button class="ghost" onclick="editMateria(\''+m.id+'\')">Editar</button>'+
+      '<button class="danger" onclick="delMateria(\''+m.id+'\')">Eliminar</button>'+
+     '</div></div>';
+  }).join('');
+ }
+ // conectar con el resto de la app
+ document.getElementById('dl-materias').innerHTML=materias.map(m=>'<option value="'+esc(m.nombre)+'">').join('');
+ const sel=document.getElementById('sm-materia');
+ const prev=sel.value;
+ sel.innerHTML=materias.length
+   ? materias.map(m=>'<option value="'+esc(m.nombre)+'">'+esc(m.nombre)+'</option>').join('')
+   : '<option value="">— Primero agrega materias —</option>';
+ if(prev) sel.value=prev;
+ stats();
+}
+function saveMateria(){
+ const n=document.getElementById('mt-nombre').value.trim();
+ if(!n)return toast('Ponle nombre a la materia',1);
+ const temas=document.getElementById('mt-temas').value.split(',').map(t=>t.trim()).filter(Boolean);
+ const datos={nombre:n,sigla:document.getElementById('mt-sigla').value.trim(),
+  cred:document.getElementById('mt-cred').value.trim(),doc:document.getElementById('mt-doc').value.trim(),
+  aula:document.getElementById('mt-aula').value.trim(),temas:temas};
+ if(mtEditId){
+  const m=materias.find(x=>x.id===mtEditId);
+  const viejo=m.nombre;
+  Object.assign(m,datos);
+  if(viejo!==n){ tasks.forEach(t=>{if((t.mat||'')===viejo)t.mat=n}); set(KT,tasks); renderTasks(); }
+  log('Materia actualizada: '+n,'ok');
+ }else{
+  if(materias.some(m=>m.nombre.toLowerCase()===n.toLowerCase()))return toast('Esa materia ya está cargada',1);
+  materias.push(Object.assign({id:uid()},datos));
+  log('Materia agregada: '+n,'ok');
+ }
+ set(KMT,materias);cancelMateria();renderMaterias();toast('Materia guardada');
+}
+function editMateria(id){
+ const m=materias.find(x=>x.id===id);if(!m)return;
+ mtEditId=id;
+ document.getElementById('mt-nombre').value=m.nombre;
+ document.getElementById('mt-sigla').value=m.sigla||'';
+ document.getElementById('mt-cred').value=m.cred||'';
+ document.getElementById('mt-doc').value=m.doc||'';
+ document.getElementById('mt-aula').value=m.aula||'';
+ document.getElementById('mt-temas').value=(m.temas||[]).join(', ');
+ document.getElementById('mts-form-title').textContent='Editando: '+m.nombre;
+ document.getElementById('mt-save').textContent='Guardar cambios';
+ document.getElementById('mt-cancel').style.display='';
+ document.getElementById('mt-nombre').focus();
+}
+function cancelMateria(){
+ mtEditId=null;
+ ['mt-nombre','mt-sigla','mt-cred','mt-doc','mt-aula','mt-temas'].forEach(i=>document.getElementById(i).value='');
+ document.getElementById('mts-form-title').textContent='Nueva materia';
+ document.getElementById('mt-save').textContent='Agregar materia';
+ document.getElementById('mt-cancel').style.display='none';
+}
+function delMateria(id){
+ const m=materias.find(x=>x.id===id);if(!m)return;
+ const n=tasks.filter(t=>(t.mat||'')===m.nombre).length;
+ if(!confirm('¿Eliminar "'+m.nombre+'"?'+(n?'\nSus '+n+' tarea(s) se conservan, pero quedan sin materia asignada.':'')))return;
+ materias=materias.filter(x=>x.id!==id);set(KMT,materias);
+ renderMaterias();log('Materia eliminada: '+m.nombre,'in');toast('Materia eliminada');
+}
+function pushMaterias(){
+ if(!materias.length)return toast('No hay materias que enviar',1);
+ const filas=materias.map(m=>{
+  const sims=simHist.filter(x=>x.materia===m.nombre);
+  const prom=sims.length?Math.round(sims.reduce((a,c)=>a+c.pct,0)/sims.length)+'%':'';
+  return [m.nombre,m.sigla,m.cred,m.doc,m.aula,(m.temas||[]).join(' | '),
+          tasks.filter(t=>(t.mat||'')===m.nombre).length, sims.length, prom];
+ });
+ pushSheet('Materias del semestre',
+  ['Materia,Sigla,Créditos,Docente,Aula/Horario,Temas,Tareas,Simulacros,Promedio'].concat(
+   filas.map(f=>f.map(csvq).join(','))).join('\n'));
+}
+
+/* ===== simulacros de examen ===== */
+function simDesde(id){
+ const m=materias.find(x=>x.id===id);if(!m)return;
+ showTab('sim');
+ document.getElementById('sm-materia').value=m.nombre;
+ if((m.temas||[]).length) document.getElementById('sm-tema').value=m.temas.join(', ');
+ document.getElementById('sm-tema').focus();
+}
+function extraerJSON(txt){
+ let t=String(txt||'').trim();
+ t=t.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+ const a=t.indexOf('['), b=t.lastIndexOf(']');
+ if(a<0||b<a) throw new Error('el tutor no devolvió preguntas en el formato esperado');
+ return JSON.parse(t.slice(a,b+1));
+}
+async function generarSimulacro(){
+ if(!hasAI())return toast('Los simulacros necesitan la app abierta dentro de Cowork',1);
+ const materia=document.getElementById('sm-materia').value.trim();
+ if(!materia)return toast('Primero agrega una materia en la pestaña Materias',1);
+ const tema=document.getElementById('sm-tema').value.trim();
+ const num=parseInt(document.getElementById('sm-num').value,10);
+ const dif=document.getElementById('sm-dif').value;
+ const btn=document.getElementById('sm-gen');btn.disabled=true;
+ document.getElementById('sm-quiz').innerHTML='';
+ document.getElementById('sm-acciones').style.display='none';
+ document.getElementById('sm-estado').innerHTML='<div class="empty">Preparando '+num+' preguntas de '+esc(materia)+'…</div>';
+ const m=materias.find(x=>x.nombre===materia)||{};
+ try{
+  const prompt='Eres un docente universitario en Bolivia. Genera EXACTAMENTE '+num+
+   ' preguntas de examen de opción múltiple sobre la materia "'+materia+'"'+
+   (tema?' centradas en estos temas: '+tema:'')+', de nivel '+dif+'.\n'+
+   'Reglas estrictas:\n'+
+   '- Devuelve SOLO un array JSON válido, sin texto antes ni después, sin bloques de código.\n'+
+   '- Cada elemento: {"p":"enunciado","o":["opción A","opción B","opción C","opción D"],"r":índice_correcto_0_a_3,"e":"explicación breve de por qué"}\n'+
+   '- Exactamente 4 opciones por pregunta y una sola correcta.\n'+
+   '- Varía la posición de la respuesta correcta entre las '+num+' preguntas.\n'+
+   '- Español, enunciados claros y autocontenidos. Nada de "ninguna de las anteriores".';
+  const res=await window.cowork.askClaude(prompt,[{materia:materia,temas:m.temas||[],docente:m.doc||'',nivel:dif,cantidad:num}]);
+  const txt=typeof res==='string'?res:(res&&(res.text||res.content||res.response))||'';
+  const arr=extraerJSON(txt).filter(q=>q&&q.p&&Array.isArray(q.o)&&q.o.length===4&&typeof q.r==='number');
+  if(arr.length<5) throw new Error('solo se generaron '+arr.length+' preguntas válidas');
+  quiz={materia:materia,tema:tema,dif:dif,preguntas:arr};
+  quizResp=new Array(arr.length).fill(-1);quizCorregido=false;
+  document.getElementById('sm-estado').innerHTML='';
+  document.getElementById('sm-reset').style.display='';
+  renderQuiz();
+  log('Simulacro generado: '+materia+' ('+arr.length+' preguntas)','ok');
+  toast(arr.length+' preguntas listas');
+ }catch(e){
+  document.getElementById('sm-estado').innerHTML='<div class="empty">No se pudo generar el simulacro: '+esc(e.message)+'. Intenta de nuevo o baja la cantidad de preguntas.</div>';
+  log('Error generando simulacro: '+e.message,'er');
+ }
+ btn.disabled=false;
+}
+function renderQuiz(){
+ if(!quiz)return;
+ const c=document.getElementById('sm-quiz');
+ c.innerHTML=quiz.preguntas.map((q,i)=>{
+  const marcada=quizResp[i];
+  const ok=quizCorregido&&marcada===q.r;
+  const mal=quizCorregido&&marcada!==-1&&marcada!==q.r;
+  const sin=quizCorregido&&marcada===-1;
+  return '<div class="card q'+(ok?' done':'')+(mal?' urgent':'')+'" style="border-left-color:'+
+    (ok?'var(--ok)':mal?'var(--danger)':sin?'var(--warn)':'var(--line-2)')+'">'+
+   '<div class="chead"><span class="badge b-mute">'+(i+1)+' / '+quiz.preguntas.length+'</span>'+
+    (quizCorregido?'<span class="badge '+(ok?'b-done':'b-urg')+'">'+(ok?'Correcta':sin?'Sin responder':'Incorrecta')+'</span>':'')+
+   '</div>'+
+   '<div class="ctitle" style="margin-bottom:9px">'+esc(q.p)+'</div>'+
+   q.o.map((op,j)=>{
+    const esCorr=quizCorregido&&j===q.r;
+    const esMarcMal=quizCorregido&&j===marcada&&j!==q.r;
+    return '<label class="opt'+(esCorr?' corr':'')+(esMarcMal?' err':'')+'">'+
+      '<input type="radio" name="q'+i+'" '+(marcada===j?'checked':'')+(quizCorregido?' disabled':'')+
+      ' onchange="marcar('+i+','+j+')"><span>'+esc(op)+'</span></label>';
+   }).join('')+
+   (quizCorregido&&q.e?'<div class="expl"><span class="k">Por qué</span> '+esc(q.e)+'</div>':'')+
+   '</div>';
+ }).join('');
+ document.getElementById('sm-acciones').style.display=quizCorregido?'none':'';
+ progresoQuiz();
+}
+function marcar(i,j){quizResp[i]=j;progresoQuiz();}
+function progresoQuiz(){
+ if(!quiz)return;
+ const n=quizResp.filter(x=>x>=0).length;
+ document.getElementById('sm-progreso').textContent='Respondidas '+n+' de '+quiz.preguntas.length;
+}
+function corregirSimulacro(){
+ if(!quiz)return;
+ const sinResp=quizResp.filter(x=>x<0).length;
+ if(sinResp&&!confirm('Te faltan '+sinResp+' pregunta(s). ¿Corregir igual?'))return;
+ quizCorregido=true;
+ const aciertos=quiz.preguntas.reduce((a,q,i)=>a+(quizResp[i]===q.r?1:0),0);
+ const pct=Math.round(aciertos*100/quiz.preguntas.length);
+ simHist.unshift({id:uid(),fecha:new Date().toISOString(),materia:quiz.materia,tema:quiz.tema,
+  dif:quiz.dif,aciertos:aciertos,total:quiz.preguntas.length,pct:pct});
+ simHist=simHist.slice(0,60);set(KSM,simHist);
+ renderQuiz();renderHist();renderMaterias();
+ document.getElementById('sm-estado').innerHTML=
+  '<div class="card" style="border-left-color:'+(pct>=70?'var(--ok)':pct>=50?'var(--warn)':'var(--danger)')+'">'+
+  '<div class="ctitle">Resultado: '+aciertos+' de '+quiz.preguntas.length+' &nbsp;·&nbsp; '+pct+'%</div>'+
+  '<div class="d">'+(pct>=85?'Excelente dominio del tema.':pct>=70?'Buen nivel. Repasa lo que fallaste y quedas listo.':
+   pct>=50?'Vas por buen camino, pero necesitas otra vuelta al material.':
+   'Conviene volver al material desde el inicio antes de repetir.')+'</div></div>';
+ window.scrollTo({top:0,behavior:'smooth'});
+ log('Simulacro corregido: '+quiz.materia+' — '+pct+'%',pct>=70?'ok':'in');
+}
+function cerrarSimulacro(){
+ quiz=null;quizResp=[];quizCorregido=false;
+ document.getElementById('sm-quiz').innerHTML='';
+ document.getElementById('sm-estado').innerHTML='';
+ document.getElementById('sm-acciones').style.display='none';
+ document.getElementById('sm-reset').style.display='none';
+}
+function renderHist(){
+ const b=document.getElementById('sm-hist');
+ if(!simHist.length){b.innerHTML='<div class="empty">Sin simulacros todavía.</div>';}
+ else{
+  b.innerHTML=simHist.map(h=>{
+   const f=new Date(h.fecha).toLocaleString('es-BO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+   const cls=h.pct>=70?'b-done':h.pct>=50?'b-pend':'b-urg';
+   return '<div class="ev"><span>'+esc(h.materia)+(h.tema?' <span class="src">'+esc(h.tema.slice(0,34))+'</span>':'')+
+     ' <span class="badge '+cls+'">'+h.pct+'%</span></span>'+
+     '<span class="when">'+h.aciertos+'/'+h.total+' · '+f+'</span></div>';
+  }).join('');
+ }
+ document.getElementById('sm-total').textContent=simHist.length;
+ document.getElementById('sm-prom').textContent=simHist.length?Math.round(simHist.reduce((a,c)=>a+c.pct,0)/simHist.length)+'%':'—';
+ document.getElementById('sm-mejor').textContent=simHist.length?Math.max.apply(null,simHist.map(h=>h.pct))+'%':'—';
+}
+
+/* ===== diagnóstico de conexión ===== */
+async function diagnostico(){
+ const b=document.getElementById('diag');
+ const filas=[];
+ const marca=(n,ok,det)=>filas.push('<div class="link-row"><span>'+n+'</span><span class="badge '+
+   (ok?'b-done':'b-urg')+'">'+(ok?'OK':'Falla')+'</span></div>'+
+   (det?'<div class="hint" style="margin:-4px 0 8px">'+esc(det)+'</div>':''));
+ b.innerHTML='<div class="empty">Probando cada servicio…</div>';
+ // puente
+ const puente=hasMcp(), ia=hasAI();
+ marca('Puente de Cowork', puente, puente?'window.cowork.callMcpTool disponible':'No se encontró el puente: abre la app dentro de Cowork');
+ marca('Motor de IA (tutor y simulacros)', ia, ia?'window.cowork.askClaude disponible':'No disponible en esta ventana');
+ // calendar
+ if(puente){
+  try{
+   const d=await mcp(CAL+'list_events',{calendarId:CAL_ID,pageSize:1,
+     startTime:new Date().toISOString(),endTime:new Date(Date.now()+864e5).toISOString()});
+   marca('Google Calendar', true, 'Calendario "'+(d.summary||CAL_ID)+'" · zona '+(d.timeZone||'—'));
+  }catch(e){ marca('Google Calendar', false, e.message); }
+  try{
+   const d=await mcp(DRV+'search_files',{query:"parentId = '"+MAT_FOLDER+"'",pageSize:1,excludeContentSnippets:true});
+   marca('Google Drive', true, 'Carpeta de material accesible · '+((d.files||[]).length?'con archivos':'vacía'));
+  }catch(e){ marca('Google Drive', false, e.message); }
+ }else{
+  marca('Google Calendar', false, 'Sin puente no se puede probar');
+  marca('Google Drive', false, 'Sin puente no se puede probar');
+ }
+ // almacenamiento local
+ let ls=false, det='';
+ try{ localStorage.setItem('exael_ping','1'); ls=localStorage.getItem('exael_ping')==='1'; localStorage.removeItem('exael_ping');
+  const bytes=Object.keys(localStorage).filter(k=>k.indexOf('exael_')===0)
+    .reduce((a,k)=>a+(localStorage.getItem(k)||'').length,0);
+  det='Guardados '+(bytes/1024).toFixed(1)+' KB · '+materias.length+' materias, '+tasks.length+' tareas, '+simHist.length+' simulacros';
+ }catch(e){ det=e.message; }
+ marca('Almacenamiento local', ls, det);
+ b.innerHTML=filas.join('');
+ log('Diagnóstico de conexión ejecutado','in');
+}
+
+
+
+
+/* ===== aviso de modo local ===== */
+const KAV='exael_aviso_v1';
+function ocultarAviso(){
+ set(KAV,true);
+ document.getElementById('no-bridge').style.display='none';
+ toast('Aviso oculto. Vuelve a mostrarlo desde Sincronización');
+}
+function mostrarAviso(){ set(KAV,false); toast('El aviso volverá a aparecer si no hay conexión'); }
+function avisoOculto(){ return get(KAV,false)===true; }
+
+/* ===== configuración de la versión web ===== */
+function esWeb(){ return !!window.exaelCfg; }          /* el puente solo existe fuera de Cowork */
+function pintarModelos(){
+ if(!esWeb())return;
+ const c=window.exaelCfg.get();
+ const pid=document.getElementById('cfg-prov').value;
+ const p=(window.exaelIA.proveedores||[]).find(x=>x.id===pid);
+ const m=document.getElementById('cfg-modelo');
+ if(!p||!m)return;
+ m.innerHTML=p.modelos.map(x=>'<option value="'+x+'">'+x+'</option>').join('');
+ if(c.iaProv===pid&&c.iaModelo&&p.modelos.indexOf(c.iaModelo)>=0) m.value=c.iaModelo;
+}
+function pintarCfg(){
+ if(!esWeb())return;
+ const c=window.exaelCfg.get();
+ const ci=document.getElementById('cfg-client'), ia=document.getElementById('cfg-ia');
+ if(ci&&!ci.value) ci.value=c.clientId||'';
+ if(ia&&!ia.value) ia.value=c.iaKey||'';
+ const sp=document.getElementById('cfg-prov');
+ if(sp&&!sp.options.length){
+  sp.innerHTML=(window.exaelIA.proveedores||[]).map(x=>'<option value="'+x.id+'">'+x.nombre+'</option>').join('');
+  if(c.iaProv) sp.value=c.iaProv;
+  pintarModelos();
+ }
+ const e=document.getElementById('cfg-estado');
+ if(e){
+  const g=window.exaelAuth&&window.exaelAuth.conectado()
+    ? 'Google: sesión activa.'
+    : (c.clientId?'Google: Client ID guardado, falta iniciar sesión.':'Google: sin Client ID (Calendar y Drive apagados).');
+  const i=c.iaKey?'IA: clave guardada ('+(c.iaModelo||'modelo por defecto')+').':'IA: sin clave (tutor y simulacros apagados).';
+  e.innerHTML=g+'<br>'+i;
+ }
+}
+async function probarIA(){
+ if(!esWeb())return;
+ guardarCfgWeb();
+ const e=document.getElementById('cfg-estado');
+ e.textContent='Probando la IA…';
+ try{ const r=await window.exaelProbarIA();
+      e.textContent='IA funcionando. Respondió: '+String(r).slice(0,60);
+      log('Prueba de IA correcta','ok');toast('La IA responde correctamente'); }
+ catch(err){ e.textContent='La IA falló: '+err.message;
+      log('Prueba de IA fallida: '+err.message,'er');toast('La IA no respondió',1); }
+}
+function guardarCfgWeb(){
+ if(!esWeb())return toast('Ya estás dentro de Cowork: no hace falta configurar nada');
+ window.exaelCfg.set('clientId',document.getElementById('cfg-client').value);
+ window.exaelCfg.set('iaKey',document.getElementById('cfg-ia').value);
+ window.exaelCfg.set('iaProv',document.getElementById('cfg-prov').value);
+ window.exaelCfg.set('iaModelo',document.getElementById('cfg-modelo').value);
+ log('Configuración web guardada','ok');toast('Configuración guardada');pintarCfg();
+}
+async function entrarGoogle(){
+ if(!esWeb())return reconectar();
+ if(!window.exaelCfg.listo()){showTab('syn');return toast('Primero pega tu Client ID de Google',1);}
+ try{ await window.exaelAuth.conectar(); log('Sesión de Google iniciada','ok');
+      toast('Conectado con Google'); pintarCfg(); }
+ catch(e){ log('No se pudo iniciar sesión: '+e.message,'er'); toast('No se pudo conectar: '+e.message,1); }
+}
+function salirGoogle(){
+ if(!esWeb())return;
+ window.exaelAuth.salir(); log('Sesión de Google cerrada','in');
+ toast('Sesión cerrada'); pintarCfg(); location.reload();
+}
+
+/* ===== llevar la app al celular ===== */
+async function subirApp(){
+ if(!hasMcp())return toast('Necesitas la app abierta dentro de Cowork para subirla',1);
+ const info=document.getElementById('app-link');
+ info.textContent='Subiendo…';
+ try{
+  const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  const b64=btoa(unescape(encodeURIComponent(html)));
+  const r=await mcp(DRV+'create_file',{title:'EXAEL — app móvil ('+fechaLocal(new Date())+').html',
+   contentMimeType:'text/html',parentId:FOLDER,base64Content:b64,disableConversionToGoogleType:true});
+  info.innerHTML='Listo: <b>'+esc(r.title)+'</b>'+
+    (r.viewUrl?' — <a href="'+r.viewUrl+'" target="_blank">ver en Drive</a>':'')+
+    '<br>En el celular: abre Drive, toca el archivo, elige <b>Descargar</b> y ábrelo con Chrome.';
+  log('App subida a Drive: '+r.title,'ok');toast('App subida a tu Drive');
+ }catch(e){
+  info.textContent='No se pudo subir: '+e.message;
+  log('Error subiendo la app: '+e.message,'er');toast('No se pudo subir la app',1);
+ }
+}
+
+/* ===== respaldo local ===== */
+function exportBackup(){
+ const data={v:2,exportado:new Date().toISOString(),horario:grid,tareas:tasks,chat:chat,
+  autoSync:autoSync,materias:materias,simulacros:simHist};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+ const a=document.createElement('a');
+ a.href=url;a.download='exael-respaldo-'+fechaLocal(new Date())+'.json';
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+ log('Respaldo descargado','ok');toast('Respaldo descargado');
+}
+document.getElementById('f-restore').addEventListener('change',e=>{
+ const f=e.target.files&&e.target.files[0]; e.target.value='';
+ if(!f)return;
+ const r=new FileReader();
+ r.onload=()=>{
+  try{
+   const d=JSON.parse(String(r.result));
+   if(!d||!Array.isArray(d.horario)||!Array.isArray(d.tareas)) throw new Error('formato desconocido');
+   if(!confirm('Se reemplazarán tu horario ('+d.horario.length+' franjas) y tus tareas ('+d.tareas.length+' fichas) actuales. ¿Continuar?'))return;
+   grid=d.horario;tasks=d.tareas;tasks.forEach(t=>{if(!t.id)t.id=uid('t')});
+   chat=Array.isArray(d.chat)?d.chat:[];
+   if(Array.isArray(d.materias)){materias=d.materias;materias.forEach(m=>{if(!m.id)m.id=uid('m')});set(KMT,materias);}
+   if(Array.isArray(d.simulacros)){simHist=d.simulacros;set(KSM,simHist);}
+   set(KH,grid);set(KT,tasks);saveChat();
+   renderGrid();renderTasks();renderChat();renderMaterias();renderHist();
+   log('Respaldo restaurado: '+materias.length+' materias, '+tasks.length+' tareas','ok');
+   toast('Respaldo restaurado');
+  }catch(err){log('Respaldo inválido: '+err.message,'er');toast('El archivo no es un respaldo válido',1);}
+ };
+ r.readAsText(f);
+});
+
+
+/* ===== pantalla de bloqueo =====
+   Aviso honesto: esto evita miradas ajenas, NO cifra nada. Los datos siguen en
+   localStorage y alguien con acceso al equipo podría leerlos desde el navegador. */
+const KPIN='exael_pin_v1';
+let lockIntentos=0;
+
+async function hashPin(txt){
+ const semilla='exael::'+txt;
+ if(window.crypto&&crypto.subtle&&crypto.subtle.digest){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(semilla));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+ }
+ let h1=0x811c9dc5,h2=0x1000193;                       /* respaldo si no hay crypto.subtle */
+ for(let i=0;i<semilla.length;i++){
+  h1=(h1^semilla.charCodeAt(i))*16777619>>>0;
+  h2=(h2+semilla.charCodeAt(i)*(i+7))>>>0;
+ }
+ return 'fb'+h1.toString(16)+h2.toString(16);
+}
+function lockErr(msg){
+ document.getElementById('lock-err').textContent=msg||'';
+ if(msg){const b=document.querySelector('.lockbox');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');}
+}
+function modoCrear(){
+ document.getElementById('lock-msg').textContent='Crea una contraseña para proteger tu información. La necesitarás cada vez que abras EXAEL.';
+ document.getElementById('lock-pin').placeholder='Nueva contraseña';
+ document.getElementById('lock-pin').setAttribute('autocomplete','new-password');
+ document.getElementById('lock-pin2').style.display='';
+ document.getElementById('lock-btn').textContent='Crear contraseña';
+ document.getElementById('lock-alt').style.display='none';
+}
+function modoEntrar(){
+ document.getElementById('lock-msg').textContent='Ingresa tu contraseña para continuar';
+ document.getElementById('lock-pin2').style.display='none';
+ document.getElementById('lock-btn').textContent='Entrar';
+ document.getElementById('lock-alt').style.display='';
+}
+function abrirApp(){
+ document.getElementById('lock').classList.add('hide');
+ document.getElementById('lock-pin').value='';
+ document.getElementById('lock-pin2').value='';
+ if(!window.__arrancado){window.__arrancado=true;arrancar();}
+}
+function bloquear(){
+ document.getElementById('lock').classList.remove('hide');
+ lockErr('');modoEntrar();
+ setTimeout(()=>document.getElementById('lock-pin').focus(),60);
+}
+async function olvidePin(){
+ if(!confirm('No hay forma de recuperar la contraseña.\n\nLa única salida es restablecer la app: se borrará la contraseña Y todos los datos guardados en este navegador (materias, tareas, horario, chat, simulacros).\n\nTus eventos de Calendar y archivos de Drive NO se tocan.\n\n¿Continuar?'))return;
+ if(!confirm('Última confirmación: esto es irreversible. ¿Borrar todo lo local?'))return;
+ Object.keys(localStorage).filter(k=>k.indexOf('exael_')===0).forEach(k=>localStorage.removeItem(k));
+ location.reload();
+}
+async function cambiarPin(){
+ const actual=prompt('Contraseña actual:');
+ if(actual===null)return;
+ const guardado=localStorage.getItem(KPIN);
+ if(guardado&&await hashPin(actual)!==guardado)return toast('Contraseña actual incorrecta',1);
+ const nueva=prompt('Nueva contraseña (mínimo 4 caracteres):');
+ if(nueva===null)return;
+ if(!nueva||nueva.length<4)return toast('Muy corta: mínimo 4 caracteres',1);
+ if(prompt('Repite la nueva contraseña:')!==nueva)return toast('No coinciden',1);
+ localStorage.setItem(KPIN,await hashPin(nueva));
+ log('Contraseña de acceso actualizada','ok');toast('Contraseña actualizada');
+}
+async function quitarPin(){
+ const guardado=localStorage.getItem(KPIN);
+ if(!guardado)return toast('No hay contraseña configurada',1);
+ const actual=prompt('Confirma tu contraseña actual para quitarla:');
+ if(actual===null)return;
+ if(await hashPin(actual)!==guardado)return toast('Contraseña incorrecta',1);
+ localStorage.removeItem(KPIN);
+ log('Contraseña de acceso desactivada','in');toast('Contraseña quitada: la app abrirá sin pedirla');
+}
+
+document.getElementById('lock-form').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const v=document.getElementById('lock-pin').value;
+ const guardado=localStorage.getItem(KPIN);
+ if(!guardado){                                   /* primera vez: crear */
+  if(v.length<4)return lockErr('Usa al menos 4 caracteres');
+  if(v!==document.getElementById('lock-pin2').value)return lockErr('Las contraseñas no coinciden');
+  localStorage.setItem(KPIN,await hashPin(v));
+  abrirApp();log('Contraseña de acceso creada','ok');toast('Contraseña creada');
+  return;
+ }
+ if(await hashPin(v)===guardado){lockIntentos=0;abrirApp();return;}
+ lockIntentos++;
+ document.getElementById('lock-pin').value='';
+ if(lockIntentos>=3){                             /* espera creciente tras 3 fallos */
+  const seg=Math.min(30,lockIntentos*5);
+  const btn=document.getElementById('lock-btn');btn.disabled=true;
+  let r=seg;lockErr('Demasiados intentos. Espera '+r+' s');
+  const t=setInterval(()=>{r--;if(r<=0){clearInterval(t);btn.disabled=false;lockErr('');}
+   else lockErr('Demasiados intentos. Espera '+r+' s');},1000);
+ }else lockErr('Contraseña incorrecta');
+});
+
+function iniciarBloqueo(){
+ if(localStorage.getItem(KPIN)) modoEntrar(); else modoCrear();
+ setTimeout(()=>document.getElementById('lock-pin').focus(),80);
+}
+
+/* ===== arranque ===== */
+function arrancar(){
+ log('Sistema iniciado.','in');
+ showTab(get(KTAB,'ia'));
+ paintUndo();
+ renderGrid();renderTasks();renderChat();renderChatMat();
+ renderMaterias();renderHist();
+ conectar();                      /* espera al puente de Cowork y luego carga Google */
+ setInterval(paintNow,60000);
+ pintarCfg();
+}
+iniciarBloqueo();
+</script>
+</body>
+</html>
