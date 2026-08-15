@@ -258,7 +258,8 @@
   var PROVEEDORES = {
     gemini: {
       nombre: 'Google AI Studio (Gemini)',
-      modelos: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+      modelos: ['gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.5-flash',
+                'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash'],
       llamar: function (key, modelo, texto) {
         return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo +
           ':generateContent?key=' + enc(key), {
@@ -293,8 +294,8 @@
     },
     openrouter: {
       nombre: 'OpenRouter',
-      modelos: ['meta-llama/llama-3.3-70b-instruct', 'google/gemini-2.0-flash-001',
-                'anthropic/claude-3.5-haiku'],
+      modelos: ['google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct',
+                'anthropic/claude-haiku-4.5'],
       llamar: function (key, modelo, texto) {
         return chatCompletions('https://openrouter.ai/api/v1/chat/completions',
           { Authorization: 'Bearer ' + key }, modelo, texto);
@@ -333,7 +334,15 @@
       var d = {}; try { d = t ? JSON.parse(t) : {}; } catch (e) { d = { raw: t }; }
       if (!r.ok) {
         var m = (d.error && (d.error.message || d.error)) || d.raw || ('HTTP ' + r.status);
-        throw new Error(typeof m === 'string' ? m.slice(0, 300) : JSON.stringify(m).slice(0, 300));
+        m = typeof m === 'string' ? m.slice(0, 300) : JSON.stringify(m).slice(0, 300);
+        if (/no longer available|not found|is not supported|does not exist/i.test(m)) {
+          m += '  →  Ese modelo ya no existe: elige otro en la lista.';
+        } else if (/API key not valid|API_KEY_INVALID|invalid_api_key|Incorrect API key/i.test(m)) {
+          m += '  →  La clave no es válida para este proveedor.';
+        } else if (/quota|rate limit|RESOURCE_EXHAUSTED/i.test(m)) {
+          m += '  →  Llegaste al límite: espera un rato o cambia de modelo.';
+        }
+        throw new Error(m);
       }
       return d;
     });
@@ -360,7 +369,7 @@
       return Promise.reject(new Error(
         'Falta la clave de IA. Ve a Sincronización → Configuración web y pega tu clave.'));
     }
-    var modelo = cfg.iaModelo || prov.modelos[0];
+    var modelo = (cfg.iaModeloLibre || cfg.iaModelo || prov.modelos[0]).trim();
     var texto = prompt + (datos && datos.length ? '\n\nDatos:\n' + JSON.stringify(datos, null, 1) : '');
     return prov.llamar(cfg.iaKey, modelo, texto);
   }

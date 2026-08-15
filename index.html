@@ -618,6 +618,9 @@ button { transition:background .15s, border-color .15s, color .15s }
         <button class="ghost" onclick="probarIA()">Probar</button>
       </div>
       <div class="row">
+        <input id="cfg-modelo-libre" placeholder="¿El modelo de la lista ya no existe? Escribe otro aquí (opcional)">
+      </div>
+      <div class="row">
         <button onclick="guardarCfgWeb()">Guardar configuración</button>
         <button class="ghost" onclick="entrarGoogle()">Iniciar sesión con Google</button><button class="ghost" onclick="mostrarAviso()">Mostrar aviso de modo local</button>
         <button class="ghost" onclick="salirGoogle()">Cerrar sesión de Google</button>
@@ -1595,6 +1598,8 @@ function pintarCfg(){
  const ci=document.getElementById('cfg-client'), ia=document.getElementById('cfg-ia');
  if(ci&&!ci.value) ci.value=c.clientId||'';
  if(ia&&!ia.value) ia.value=c.iaKey||'';
+ const ml=document.getElementById('cfg-modelo-libre');
+ if(ml&&!ml.value) ml.value=c.iaModeloLibre||'';
  const sp=document.getElementById('cfg-prov');
  if(sp&&!sp.options.length){
   sp.innerHTML=(window.exaelIA.proveedores||[]).map(x=>'<option value="'+x.id+'">'+x.nombre+'</option>').join('');
@@ -1606,7 +1611,7 @@ function pintarCfg(){
   const g=window.exaelAuth&&window.exaelAuth.conectado()
     ? 'Google: sesión activa.'
     : (c.clientId?'Google: Client ID guardado, falta iniciar sesión.':'Google: sin Client ID (Calendar y Drive apagados).');
-  const i=c.iaKey?'IA: clave guardada ('+(c.iaModelo||'modelo por defecto')+').':'IA: sin clave (tutor y simulacros apagados).';
+  const i=c.iaKey?'IA: clave guardada ('+(c.iaModeloLibre||c.iaModelo||'modelo por defecto')+').':'IA: sin clave (tutor y simulacros apagados).';
   e.innerHTML=g+'<br>'+i;
  }
 }
@@ -1627,6 +1632,7 @@ function guardarCfgWeb(){
  window.exaelCfg.set('iaKey',document.getElementById('cfg-ia').value);
  window.exaelCfg.set('iaProv',document.getElementById('cfg-prov').value);
  window.exaelCfg.set('iaModelo',document.getElementById('cfg-modelo').value);
+ window.exaelCfg.set('iaModeloLibre',document.getElementById('cfg-modelo-libre').value);
  log('Configuración web guardada','ok');toast('Configuración guardada');pintarCfg();
 }
 async function entrarGoogle(){
