@@ -616,9 +616,10 @@ button { transition:background .15s, border-color .15s, color .15s }
       <div class="row">
         <input id="cfg-ia" type="password" placeholder="Clave de la IA (se guarda solo en este dispositivo)">
         <button class="ghost" onclick="probarIA()">Probar</button>
+        <button class="ghost" onclick="cargarModelos()">Ver mis modelos</button>
       </div>
       <div class="row">
-        <input id="cfg-modelo-libre" placeholder="¿El modelo de la lista ya no existe? Escribe otro aquí (opcional)">
+        <input id="cfg-modelo-libre" placeholder="Escribir un modelo a mano (opcional, tiene prioridad)">
       </div>
       <div class="row">
         <button onclick="guardarCfgWeb()">Guardar configuración</button>
@@ -1613,6 +1614,27 @@ function pintarCfg(){
     : (c.clientId?'Google: Client ID guardado, falta iniciar sesión.':'Google: sin Client ID (Calendar y Drive apagados).');
   const i=c.iaKey?'IA: clave guardada ('+(c.iaModeloLibre||c.iaModelo||'modelo por defecto')+').':'IA: sin clave (tutor y simulacros apagados).';
   e.innerHTML=g+'<br>'+i;
+ }
+}
+
+async function cargarModelos(){
+ if(!esWeb())return;
+ guardarCfgWeb();
+ const e=document.getElementById('cfg-estado');
+ e.textContent='Consultando los modelos de tu cuenta…';
+ try{
+  const ms=await window.exaelListarModelos();
+  const sel=document.getElementById('cfg-modelo'), previo=sel.value;
+  sel.innerHTML=ms.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
+  if(ms.indexOf(previo)>=0) sel.value=previo;
+  document.getElementById('cfg-modelo-libre').value='';
+  window.exaelCfg.set('iaModelo',sel.value);
+  window.exaelCfg.set('iaModeloLibre','');
+  e.innerHTML=ms.length+' modelo(s) disponibles en tu cuenta. Elige uno y pulsa <b>Probar</b>.';
+  log('Modelos cargados del proveedor: '+ms.length,'ok');toast(ms.length+' modelos encontrados');
+ }catch(err){
+  e.textContent='No se pudo obtener la lista: '+err.message;
+  log('Error listando modelos: '+err.message,'er');
  }
 }
 async function probarIA(){

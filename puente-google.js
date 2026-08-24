@@ -278,7 +278,7 @@
     },
     openai: {
       nombre: 'OpenAI',
-      modelos: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini'],
+      modelos: ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o'],
       llamar: function (key, modelo, texto) {
         return chatCompletions('https://api.openai.com/v1/chat/completions',
           { Authorization: 'Bearer ' + key }, modelo, texto);
@@ -286,7 +286,7 @@
     },
     groq: {
       nombre: 'Groq (gratis)',
-      modelos: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+      modelos: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'groq/compound', 'groq/compound-mini'],
       llamar: function (key, modelo, texto) {
         return chatCompletions('https://api.groq.com/openai/v1/chat/completions',
           { Authorization: 'Bearer ' + key }, modelo, texto);
@@ -361,6 +361,52 @@
       return c.content;
     });
   }
+
+
+  /* ---------- listar los modelos que tu cuenta puede usar ----------
+     Se acabó adivinar: cada proveedor expone su catálogo y lo consultamos con tu clave. */
+  var LISTAS = {
+    gemini: function (key) {
+      return fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + enc(key) +
+        '&pageSize=200').then(leerJSON).then(function (d) {
+        return (d.models || [])
+          .filter(function (m) {
+            var g = m.supportedGenerationMethods || m.supportedActions || [];
+            return g.indexOf('generateContent') >= 0;
+          })
+          .map(function (m) { return String(m.name || '').replace(/^models\//, ''); })
+          .filter(function (n) { return n && !/embedding|aqa|tts|image|video|veo|lyria/i.test(n); });
+      });
+    },
+    openai:     function (k) { return listaOpenAI('https://api.openai.com/v1/models', k); },
+    groq:       function (k) { return listaOpenAI('https://api.groq.com/openai/v1/models', k); },
+    openrouter: function (k) { return listaOpenAI('https://openrouter.ai/api/v1/models', k); },
+    anthropic:  function (k) {
+      return fetch('https://api.anthropic.com/v1/models?limit=100', {
+        headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01',
+                   'anthropic-dangerous-direct-browser-access': 'true' }
+      }).then(leerJSON).then(function (d) {
+        return (d.data || []).map(function (m) { return m.id; });
+      });
+    }
+  };
+  function listaOpenAI(url, key) {
+    return fetch(url, { headers: { Authorization: 'Bearer ' + key } })
+      .then(leerJSON).then(function (d) {
+        return (d.data || []).map(function (m) { return m.id; })
+          .filter(function (n) { return !/whisper|tts|embed|guard|orpheus|dall|moderation/i.test(n); });
+      });
+  }
+  window.exaelListarModelos = function () {
+    var id = cfg.iaProv || 'gemini';
+    if (!cfg.iaKey) return Promise.reject(new Error('primero pega tu clave y guarda'));
+    if (!LISTAS[id]) return Promise.reject(new Error('ese proveedor no publica su catálogo'));
+    return LISTAS[id](cfg.iaKey).then(function (ms) {
+      ms = ms.filter(Boolean).sort();
+      if (!ms.length) throw new Error('tu cuenta no tiene modelos de texto disponibles');
+      return ms;
+    });
+  };
 
   function askIA(prompt, datos) {
     var prov = PROVEEDORES[cfg.iaProv || 'gemini'];
