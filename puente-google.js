@@ -45,6 +45,12 @@
     return new Promise(function (res, rej) {
       if (!cfg.clientId) return rej(new Error('falta el Client ID de Google'));
       if (token && Date.now() < tokenExp - 60000) return res(token);
+      var listo = false;
+      var vencido = setTimeout(function () {
+        if (listo) return;
+        listo = true;
+        rej(new Error('Google no respondió (¿el navegador bloqueó la ventana de acceso?). Intenta de nuevo e inicia sesión con Google manualmente desde Configuración web.'));
+      }, 45000);
       esperarGIS().then(function () {
         if (!tokenClient) {
           tokenClient = google.accounts.oauth2.initTokenClient({
@@ -52,6 +58,8 @@
           });
         }
         tokenClient.callback = function (r) {
+          if (listo) return;
+          listo = true; clearTimeout(vencido);
           if (r.error) return rej(new Error(r.error_description || r.error));
           token = r.access_token;
           tokenExp = Date.now() + (parseInt(r.expires_in, 10) || 3600) * 1000;
@@ -59,7 +67,7 @@
           res(token);
         };
         tokenClient.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
-      }).catch(rej);
+      }).catch(function (e) { if (listo) return; listo = true; clearTimeout(vencido); rej(e); });
     });
   }
 
@@ -174,6 +182,51 @@
     }).then(archivoSalida);
   }
 
+  function descargarBytes(id) {
+    return pedirToken(false).then(function (tk) {
+      return fetch(DRV + '/' + id + '?alt=media', { headers: { Authorization: 'Bearer ' + tk } });
+    }).then(function (r) {
+      if (!r.ok) throw new Error('No se pudo descargar el archivo (HTTP ' + r.status + ')');
+      return r.arrayBuffer();
+    });
+  }
+  function bufferABase64(buf) {
+    var bytes = new Uint8Array(buf), bin = '', chunk = 0x8000;
+    for (var i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(bin);
+  }
+  var PDFJS_VER = '3.11.174';
+  function extraerTextoPDF(buf) {
+    if (!window.pdfjsLib) {
+      return Promise.resolve('[No se pudo cargar el lector de PDF en esta página]');
+    }
+    if (!extraerTextoPDF._workerListo) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VER + '/pdf.worker.min.js';
+      extraerTextoPDF._workerListo = true;
+    }
+    return window.pdfjsLib.getDocument({ data: buf }).promise.then(function (pdf) {
+      var max = Math.min(pdf.numPages, 40);          /* tope para no colgar la pestaña con libros enormes */
+      var paginas = [], cadena = Promise.resolve();
+      var _loop = function (p) {
+        cadena = cadena.then(function () {
+          return pdf.getPage(p).then(function (pg) {
+            return pg.getTextContent().then(function (tc) {
+              paginas.push(tc.items.map(function (it) { return it.str || ''; }).join(' '));
+            });
+          });
+        });
+      };
+      for (var p = 1; p <= max; p++) _loop(p);
+      return cadena.then(function () {
+        var texto = paginas.join('\n\n').trim();
+        if (pdf.numPages > max) texto += '\n\n[Documento truncado: se leyeron las primeras ' + max + ' de ' + pdf.numPages + ' páginas]';
+        return texto || '[Este PDF no tiene texto seleccionable — parece un escaneo. El tutor no puede leerlo como texto; conviértelo a imagen y súbelo así, o usa OCR primero.]';
+      });
+    });
+  }
   function leerContenido(id) {
     return api(DRV + '/' + id + '?fields=id,name,mimeType', {}).then(function (f) {
       var m = f.mimeType || '';
@@ -192,8 +245,16 @@
         }).then(function (r) { return r.text(); })
           .then(function (t) { return { fileContent: t }; });
       }
-      return { fileContent: '', nota: 'Los PDFs e imágenes no se pueden leer desde el navegador. ' +
-        'Súbelos como texto o usa la app dentro de Cowork para analizarlos.' };
+      if (m === 'application/pdf') {
+        return descargarBytes(id).then(extraerTextoPDF).then(function (texto) { return { fileContent: texto }; });
+      }
+      if (m.indexOf('image/') === 0) {
+        return descargarBytes(id).then(function (buf) {
+          return { imagenBase64: bufferABase64(buf), mimeType: m };
+        });
+      }
+      return { fileContent: '', nota: 'Ese formato no se puede leer desde el navegador. ' +
+        'Los formatos legibles aquí son: PDF, imágenes, texto plano, CSV y documentos de Google.' };
     });
   }
 
@@ -258,14 +319,17 @@
   var PROVEEDORES = {
     gemini: {
       nombre: 'Google AI Studio (Gemini)',
+      vision: true,
       modelos: ['gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.5-flash',
                 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash'],
-      llamar: function (key, modelo, texto) {
+      llamar: function (key, modelo, texto, imagen) {
+        var parts = [{ text: texto }];
+        if (imagen) parts.push({ inlineData: { mimeType: imagen.mimeType, data: imagen.base64 } });
         return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo +
           ':generateContent?key=' + enc(key), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: texto }] }],
+            contents: [{ parts: parts }],
             generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
           })
         }).then(leerJSON).then(function (d) {
@@ -278,14 +342,16 @@
     },
     openai: {
       nombre: 'OpenAI',
+      vision: true,
       modelos: ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o'],
-      llamar: function (key, modelo, texto) {
+      llamar: function (key, modelo, texto, imagen) {
         return chatCompletions('https://api.openai.com/v1/chat/completions',
-          { Authorization: 'Bearer ' + key }, modelo, texto);
+          { Authorization: 'Bearer ' + key }, modelo, texto, imagen);
       }
     },
     groq: {
       nombre: 'Groq (gratis)',
+      vision: false,
       modelos: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'groq/compound', 'groq/compound-mini'],
       llamar: function (key, modelo, texto) {
         return chatCompletions('https://api.groq.com/openai/v1/chat/completions',
@@ -294,17 +360,21 @@
     },
     openrouter: {
       nombre: 'OpenRouter',
+      vision: true,
       modelos: ['google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct',
                 'anthropic/claude-haiku-4.5'],
-      llamar: function (key, modelo, texto) {
+      llamar: function (key, modelo, texto, imagen) {
         return chatCompletions('https://openrouter.ai/api/v1/chat/completions',
-          { Authorization: 'Bearer ' + key }, modelo, texto);
+          { Authorization: 'Bearer ' + key }, modelo, texto, imagen);
       }
     },
     anthropic: {
       nombre: 'Anthropic (Claude)',
+      vision: true,
       modelos: ['claude-haiku-4-5-20251001', 'claude-sonnet-5'],
-      llamar: function (key, modelo, texto) {
+      llamar: function (key, modelo, texto, imagen) {
+        var content = [{ type: 'text', text: texto }];
+        if (imagen) content.unshift({ type: 'image', source: { type: 'base64', media_type: imagen.mimeType, data: imagen.base64 } });
         return fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -313,7 +383,7 @@
           },
           body: JSON.stringify({
             model: modelo, max_tokens: 4096,
-            messages: [{ role: 'user', content: texto }]
+            messages: [{ role: 'user', content: content }]
           })
         }).then(leerJSON).then(function (d) {
           var c = d.content && d.content[0];
@@ -347,13 +417,18 @@
       return d;
     });
   }
-  function chatCompletions(url, headers, modelo, texto) {
+  function chatCompletions(url, headers, modelo, texto, imagen) {
+    var content = texto;
+    if (imagen) {
+      content = [{ type: 'text', text: texto },
+        { type: 'image_url', image_url: { url: 'data:' + imagen.mimeType + ';base64,' + imagen.base64 } }];
+    }
     return fetch(url, {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
       body: JSON.stringify({
         model: modelo, temperature: 0.7, max_tokens: 4096,
-        messages: [{ role: 'user', content: texto }]
+        messages: [{ role: 'user', content: content }]
       })
     }).then(leerJSON).then(function (d) {
       var c = d.choices && d.choices[0] && d.choices[0].message;
@@ -416,8 +491,17 @@
         'Falta la clave de IA. Ve a Sincronización → Configuración web y pega tu clave.'));
     }
     var modelo = (cfg.iaModeloLibre || cfg.iaModelo || prov.modelos[0]).trim();
-    var texto = prompt + (datos && datos.length ? '\n\nDatos:\n' + JSON.stringify(datos, null, 1) : '');
-    return prov.llamar(cfg.iaKey, modelo, texto);
+    var imagen = null;
+    var datosTexto = (datos || []).filter(function (d) {
+      if (d && d.imagenBase64) { imagen = { base64: d.imagenBase64, mimeType: d.mimeType || 'image/png' }; return false; }
+      return true;
+    });
+    if (imagen && !prov.vision) {
+      return Promise.reject(new Error('"' + prov.nombre + '" no puede leer imágenes con este modelo. ' +
+        'Cambia a Gemini, OpenAI, Anthropic u OpenRouter en Configuración web para analizar imágenes.'));
+    }
+    var texto = prompt + (datosTexto.length ? '\n\nDatos:\n' + JSON.stringify(datosTexto, null, 1) : '');
+    return prov.llamar(cfg.iaKey, modelo, texto, imagen);
   }
   window.exaelProbarIA = function () { return askIA('Responde solo: listo', []); };
 

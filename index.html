@@ -291,6 +291,7 @@ button { transition:background .15s, border-color .15s, color .15s }
 }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="puente-google.js"></script>
 </head>
 <body>
@@ -629,9 +630,8 @@ button { transition:background .15s, border-color .15s, color .15s }
       <div class="hint" id="cfg-estado" style="margin-top:9px"></div>
 
       <h3>Llevar EXAEL al celular</h3>
-      <div class="hint">Sube una copia de la app a tu Google Drive. Desde el celular la descargas, la abres en el navegador y la agregas a la pantalla de inicio. En el teléfono funciona en modo local: materias, horario, tareas y simulacros guardados; sin Calendar, Drive ni tutor.</div>
-      <div class="row" style="margin-top:0"><button onclick="subirApp()">Subir la app a mi Drive</button><button class="ghost" onclick="exportBackup()">Descargar mis datos (.json)</button></div>
-      <div class="hint" id="app-link" style="margin-top:10px"></div>
+      <div class="hint">Esta misma página ya es tu app móvil: abre esta URL en el navegador del celular y agrégala a la pantalla de inicio (menú ⋮ → Añadir a pantalla de inicio). localStorage no se comparte entre navegadores ni dispositivos, así que usa el respaldo para pasar tus datos.</div>
+      <div class="row" style="margin-top:0"><button class="ghost" onclick="exportBackup()">Descargar mis datos (.json)</button></div>
 
       <h3>Acceso y privacidad</h3>
       <div class="hint">La contraseña impide que alguien abra la app y vea tus datos de un vistazo. No cifra la información: quien tenga acceso al navegador de esta computadora podría leerla igual.</div>
@@ -951,7 +951,15 @@ async function saveTask(){
   if(autoSync&&t.date){
    if(t.gid) await calUpdateTask(t,cambióFecha); else await calCreateForTask(t);
   }else if(t.gid&&!t.date){
-   log('La ficha "'+t.name+'" se quedó sin fecha; su evento sigue en el Calendar','in');
+   if(autoSync){
+    try{
+     await mcp(CAL+'delete_event',{calendarId:CAL_ID,eventId:t.gid,notificationLevel:'NONE'});
+     log('Se quitó la fecha de "'+t.name+'": su evento se borró del Calendar','ok');
+    }catch(e){log('No se pudo borrar el evento de "'+t.name+'" al quitar la fecha: '+e.message,'er');}
+    t.gid=null;set(KT,tasks);renderTasks();loadGoogle();
+   }else{
+    log('La ficha "'+t.name+'" se quedó sin fecha; su evento sigue en el Calendar (sincronización automática apagada)','in');
+   }
   }
  }else{
   const t=Object.assign({id:uid('t'),done:false,gid:null},f);
@@ -1105,7 +1113,8 @@ async function pushHorarioCal(){
    }catch(e){fallos++;}
   }
  }
- set(KG,{stamp:new Date().toLocaleString('es-BO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),ids});
+ const idsPrevios=(previo&&previo.ids)||[];
+ set(KG,{stamp:new Date().toLocaleString('es-BO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),ids:idsPrevios.concat(ids)});
  paintUndo();
  log(ids.length+' bloques del horario volcados al Calendar'+(fallos?' ('+fallos+' fallaron)':''),fallos?'er':'ok');
  toast(ids.length+' bloques creados en Calendar');loadGoogle();
@@ -1277,16 +1286,22 @@ async function askDoc(preset){
  const btn=document.getElementById('btn-mat');btn.disabled=true;
  try{
   const doc=await mcp(DRV+'read_file_content',{fileId:id});
-  const contenido=(doc.fileContent||doc.content||'').slice(0,60000);
-  if(!contenido) throw new Error('sin contenido legible');
+  let datos;
+  if(doc.imagenBase64){
+   datos=[{archivo:nombre,imagenBase64:doc.imagenBase64,mimeType:doc.mimeType}];
+  }else{
+   const contenido=(doc.fileContent||doc.content||'').slice(0,60000);
+   if(!contenido) throw new Error(doc.nota||'sin contenido legible');
+   datos=[{archivo:nombre,contenido:contenido}];
+  }
   chatMat[chatMat.length-1]={r:'a',t:'Analizando…'};renderChatMat();
   const res=await window.cowork.askClaude(
    'Eres el tutor académico de Exael. Responde SOLO con base en el documento entregado, en español, claro y concreto (máx 300 palabras). Si el documento no cubre la pregunta, dilo. Cita la sección o el tema del que sacas cada punto. No uses emojis.\n\nDocumento: '+nombre+'\nPregunta: '+q,
-   [{archivo:nombre,contenido:contenido}]);
+   datos);
   chatMat[chatMat.length-1]={r:'a',t:textoIA(res)};
   log('Documento analizado: '+nombre,'ok');
  }catch(e){
-  chatMat[chatMat.length-1]={r:'a',t:'No pude leer ese archivo. Los formatos legibles son PDF, Word, Excel, PowerPoint, imágenes y documentos de Google. Videos y audios no se pueden analizar.'};
+  chatMat[chatMat.length-1]={r:'a',t:'No pude leer ese archivo: '+e.message};
   log('No se pudo analizar: '+e.message,'er');
  }
  btn.disabled=false;renderChatMat();
@@ -1328,11 +1343,11 @@ function renderMaterias(){
   }).join('');
  }
  // conectar con el resto de la app
- document.getElementById('dl-materias').innerHTML=materias.map(m=>'<option value="'+esc(m.nombre)+'">').join('');
+ document.getElementById('dl-materias').innerHTML=materias.map(m=>'<option value="'+escA(m.nombre)+'">').join('');
  const sel=document.getElementById('sm-materia');
  const prev=sel.value;
  sel.innerHTML=materias.length
-   ? materias.map(m=>'<option value="'+esc(m.nombre)+'">'+esc(m.nombre)+'</option>').join('')
+   ? materias.map(m=>'<option value="'+escA(m.nombre)+'">'+esc(m.nombre)+'</option>').join('')
    : '<option value="">— Primero agrega materias —</option>';
  if(prev) sel.value=prev;
  stats();
@@ -1346,9 +1361,13 @@ function saveMateria(){
   aula:document.getElementById('mt-aula').value.trim(),temas:temas};
  if(mtEditId){
   const m=materias.find(x=>x.id===mtEditId);
+  if(!m) return cancelMateria();
   const viejo=m.nombre;
   Object.assign(m,datos);
-  if(viejo!==n){ tasks.forEach(t=>{if((t.mat||'')===viejo)t.mat=n}); set(KT,tasks); renderTasks(); }
+  if(viejo!==n){
+   tasks.forEach(t=>{if((t.mat||'')===viejo)t.mat=n}); set(KT,tasks); renderTasks();
+   simHist.forEach(h=>{if(h.materia===viejo)h.materia=n}); set(KSM,simHist);
+  }
   log('Materia actualizada: '+n,'ok');
  }else{
   if(materias.some(m=>m.nombre.toLowerCase()===n.toLowerCase()))return toast('Esa materia ya está cargada',1);
@@ -1383,6 +1402,7 @@ function delMateria(id){
  const n=tasks.filter(t=>(t.mat||'')===m.nombre).length;
  if(!confirm('¿Eliminar "'+m.nombre+'"?'+(n?'\nSus '+n+' tarea(s) se conservan, pero quedan sin materia asignada.':'')))return;
  materias=materias.filter(x=>x.id!==id);set(KMT,materias);
+ if(mtEditId===id) cancelMateria();
  renderMaterias();log('Materia eliminada: '+m.nombre,'in');toast('Materia eliminada');
 }
 function pushMaterias(){
@@ -1406,12 +1426,25 @@ function simDesde(id){
  if((m.temas||[]).length) document.getElementById('sm-tema').value=m.temas.join(', ');
  document.getElementById('sm-tema').focus();
 }
+/* busca el '[' inicial y su ']' de cierre real, contando profundidad y sin
+   confundirse con corchetes que aparezcan dentro de un string del propio JSON */
 function extraerJSON(txt){
  let t=String(txt||'').trim();
  t=t.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
- const a=t.indexOf('['), b=t.lastIndexOf(']');
- if(a<0||b<a) throw new Error('el tutor no devolvió preguntas en el formato esperado');
- return JSON.parse(t.slice(a,b+1));
+ const inicio=t.indexOf('[');
+ if(inicio<0) throw new Error('el tutor no devolvió preguntas en el formato esperado');
+ let prof=0,enStr=false,bs=false;
+ for(let i=inicio;i<t.length;i++){
+  const c=t[i];
+  if(enStr){
+   if(bs)bs=false; else if(c==='\\')bs=true; else if(c==='"')enStr=false;
+   continue;
+  }
+  if(c==='"'){enStr=true;continue;}
+  if(c==='[')prof++;
+  else if(c===']'){prof--; if(prof===0) return JSON.parse(t.slice(inicio,i+1));}
+ }
+ throw new Error('el tutor no devolvió preguntas en el formato esperado');
 }
 async function generarSimulacro(){
  if(!hasAI())return toast('Los simulacros necesitan la app abierta dentro de Cowork',1);
@@ -1617,8 +1650,11 @@ function pintarCfg(){
  }
 }
 
+let cfgBusy=false;
 async function cargarModelos(){
- if(!esWeb())return;
+ if(!esWeb()||cfgBusy)return;
+ cfgBusy=true;
+ const btns=document.querySelectorAll('#p-syn button');btns.forEach(b=>b.disabled=true);
  guardarCfgWeb();
  const e=document.getElementById('cfg-estado');
  e.textContent='Consultando los modelos de tu cuenta…';
@@ -1636,9 +1672,12 @@ async function cargarModelos(){
   e.textContent='No se pudo obtener la lista: '+err.message;
   log('Error listando modelos: '+err.message,'er');
  }
+ btns.forEach(b=>b.disabled=false);cfgBusy=false;
 }
 async function probarIA(){
- if(!esWeb())return;
+ if(!esWeb()||cfgBusy)return;
+ cfgBusy=true;
+ const btns=document.querySelectorAll('#p-syn button');btns.forEach(b=>b.disabled=true);
  guardarCfgWeb();
  const e=document.getElementById('cfg-estado');
  e.textContent='Probando la IA…';
@@ -1647,6 +1686,7 @@ async function probarIA(){
       log('Prueba de IA correcta','ok');toast('La IA responde correctamente'); }
  catch(err){ e.textContent='La IA falló: '+err.message;
       log('Prueba de IA fallida: '+err.message,'er');toast('La IA no respondió',1); }
+ btns.forEach(b=>b.disabled=false);cfgBusy=false;
 }
 function guardarCfgWeb(){
  if(!esWeb())return toast('Ya estás dentro de Cowork: no hace falta configurar nada');
@@ -1668,26 +1708,6 @@ function salirGoogle(){
  if(!esWeb())return;
  window.exaelAuth.salir(); log('Sesión de Google cerrada','in');
  toast('Sesión cerrada'); pintarCfg(); location.reload();
-}
-
-/* ===== llevar la app al celular ===== */
-async function subirApp(){
- if(!hasMcp())return toast('Necesitas la app abierta dentro de Cowork para subirla',1);
- const info=document.getElementById('app-link');
- info.textContent='Subiendo…';
- try{
-  const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
-  const b64=btoa(unescape(encodeURIComponent(html)));
-  const r=await mcp(DRV+'create_file',{title:'EXAEL — app móvil ('+fechaLocal(new Date())+').html',
-   contentMimeType:'text/html',parentId:FOLDER,base64Content:b64,disableConversionToGoogleType:true});
-  info.innerHTML='Listo: <b>'+esc(r.title)+'</b>'+
-    (r.viewUrl?' — <a href="'+r.viewUrl+'" target="_blank">ver en Drive</a>':'')+
-    '<br>En el celular: abre Drive, toca el archivo, elige <b>Descargar</b> y ábrelo con Chrome.';
-  log('App subida a Drive: '+r.title,'ok');toast('App subida a tu Drive');
- }catch(e){
-  info.textContent='No se pudo subir: '+e.message;
-  log('Error subiendo la app: '+e.message,'er');toast('No se pudo subir la app',1);
- }
 }
 
 /* ===== respaldo local ===== */
