@@ -320,6 +320,7 @@
     gemini: {
       nombre: 'Google AI Studio (Gemini)',
       vision: true,
+      limiteTexto: 200000,
       modelos: ['gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.5-flash',
                 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash'],
       llamar: function (key, modelo, texto, imagen) {
@@ -343,6 +344,7 @@
     openai: {
       nombre: 'OpenAI',
       vision: true,
+      limiteTexto: 200000,
       modelos: ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o'],
       llamar: function (key, modelo, texto, imagen) {
         return chatCompletions('https://api.openai.com/v1/chat/completions',
@@ -352,6 +354,7 @@
     groq: {
       nombre: 'Groq (gratis)',
       vision: false,
+      limiteTexto: 16000,               /* la capa gratis limita tokens por minuto: hay que ir corto */
       modelos: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'groq/compound', 'groq/compound-mini'],
       llamar: function (key, modelo, texto) {
         return chatCompletions('https://api.groq.com/openai/v1/chat/completions',
@@ -361,6 +364,7 @@
     openrouter: {
       nombre: 'OpenRouter',
       vision: true,
+      limiteTexto: 60000,
       modelos: ['google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct',
                 'anthropic/claude-haiku-4.5'],
       llamar: function (key, modelo, texto, imagen) {
@@ -371,6 +375,7 @@
     anthropic: {
       nombre: 'Anthropic (Claude)',
       vision: true,
+      limiteTexto: 200000,
       modelos: ['claude-haiku-4-5-20251001', 'claude-sonnet-5'],
       llamar: function (key, modelo, texto, imagen) {
         var content = [{ type: 'text', text: texto }];
@@ -398,6 +403,12 @@
       return { id: k, nombre: PROVEEDORES[k].nombre, modelos: PROVEEDORES[k].modelos };
     })
   };
+  /* tope de caracteres de documento recomendado para el proveedor activo,
+     para no reventar el límite de tokens de los planes gratis (ej. Groq) */
+  window.exaelLimiteTexto = function () {
+    var prov = PROVEEDORES[cfg.iaProv || 'gemini'];
+    return (prov && prov.limiteTexto) || 20000;
+  };
 
   function leerJSON(r) {
     return r.text().then(function (t) {
@@ -409,6 +420,8 @@
           m += '  →  Ese modelo ya no existe: elige otro en la lista.';
         } else if (/API key not valid|API_KEY_INVALID|invalid_api_key|Incorrect API key/i.test(m)) {
           m += '  →  La clave no es válida para este proveedor.';
+        } else if (/too large|too long|context length|maximum context|tokens per minute|TPM/i.test(m)) {
+          m += '  →  El documento o la pregunta son muy largos para este modelo. Prueba con un archivo más corto, una pregunta más puntual, o cambia a Gemini/OpenAI/Anthropic en Configuración web.';
         } else if (/quota|rate limit|RESOURCE_EXHAUSTED/i.test(m)) {
           m += '  →  Llegaste al límite: espera un rato o cambia de modelo.';
         }

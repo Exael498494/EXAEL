@@ -1290,8 +1290,11 @@ async function askDoc(preset){
   if(doc.imagenBase64){
    datos=[{archivo:nombre,imagenBase64:doc.imagenBase64,mimeType:doc.mimeType}];
   }else{
-   const contenido=(doc.fileContent||doc.content||'').slice(0,60000);
+   const bruto=doc.fileContent||doc.content||'';
+   const tope=window.exaelLimiteTexto?window.exaelLimiteTexto():60000;
+   const contenido=bruto.slice(0,tope);
    if(!contenido) throw new Error(doc.nota||'sin contenido legible');
+   if(bruto.length>tope) log('"'+nombre+'" se recortó a '+tope+' de '+bruto.length+' caracteres para no exceder el límite del proveedor de IA','in');
    datos=[{archivo:nombre,contenido:contenido}];
   }
   chatMat[chatMat.length-1]={r:'a',t:'Analizando…'};renderChatMat();
