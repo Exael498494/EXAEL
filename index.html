@@ -551,7 +551,7 @@ button { transition:background .15s, border-color .15s, color .15s }
       <div class="row" style="margin-top:0;margin-bottom:12px">
         <input id="m-filtro" placeholder="Filtrar por nombre o materia…" oninput="renderMats()">
         <button class="ghost" onclick="loadMats()">Recargar</button>
-        <a href="https://drive.google.com/drive/folders/1QDu5_chVuoaF2qCEuMwpnVpOGFKJhZcx" target="_blank" rel="noopener" style="margin-left:auto">Abrir carpeta en Drive</a>
+        <a href="#" id="lnk-mat" target="_blank" rel="noopener" style="margin-left:auto">Abrir carpeta en Drive</a>
       </div>
       <div id="mats"><div class="empty">Cargando biblioteca…</div></div>
 
@@ -584,10 +584,9 @@ button { transition:background .15s, border-color .15s, color .15s }
       </div>
 
       <h3>Archivos en Drive</h3>
-      <div class="link-row"><span>Carpeta madre</span><a href="https://drive.google.com/drive/folders/1B5kvngwahE0iUlCvQ0b_kRi2nSX2zoC8" target="_blank" rel="noopener">EXAEL — Centro Académico</a></div>
-      <div class="link-row"><span>Hoja de horario</span><a href="https://docs.google.com/spreadsheets/d/13TZpYrQ_MUX8eSbDzRf-KqMd5QuqNiwsWbej4MTpwcU/edit" target="_blank" rel="noopener">Horario Semanal</a></div>
-      <div class="link-row"><span>Hoja de tareas</span><a href="https://docs.google.com/spreadsheets/d/1D0aAh1ksxCfKA_MBvUMt-_D39mYhOC885ZbQxtnkenc/edit" target="_blank" rel="noopener">Tareas y Entregas</a></div>
-      <div class="link-row"><span>Material de estudio</span><a href="https://drive.google.com/drive/folders/1QDu5_chVuoaF2qCEuMwpnVpOGFKJhZcx" target="_blank" rel="noopener">Biblioteca de archivos</a></div>
+      <div class="hint">Cada cuenta de Google tiene su propia carpeta «EXAEL — Centro Académico»: se crea sola la primera vez que te conectas.</div>
+      <div class="link-row"><span>Carpeta madre</span><a href="#" id="lnk-root" target="_blank" rel="noopener">Abrir en tu Drive</a></div>
+      <div class="link-row"><span>Material de estudio</span><a href="#" id="lnk-mat-syn" target="_blank" rel="noopener">Abrir en tu Drive</a></div>
 
       <h3>Acciones manuales</h3>
       <div class="row" style="margin-top:0">
@@ -655,8 +654,8 @@ button { transition:background .15s, border-color .15s, color .15s }
 <script>
 /* ===== constantes ===== */
 const CAL='mcp__574fdca0-53ea-4f7c-81b4-bf821412b231__', DRV='mcp__17ee4cd8-dc52-455b-a28a-99130ec7e7fa__';
-const CAL_ID='villegasmejia321@gmail.com', FOLDER='1B5kvngwahE0iUlCvQ0b_kRi2nSX2zoC8', TZ='America/La_Paz';
-const MAT_FOLDER='1QDu5_chVuoaF2qCEuMwpnVpOGFKJhZcx';
+const CAL_ID='primary', TZ='America/La_Paz';
+const KFR='exael_folder_root_v1', KFM='exael_folder_mat_v1';
 const KMT='exael_materias_v1', KSM='exael_simulacros_v1';
 const KT='exael_tasks_v2', KH='exael_horario_v2', KS='exael_sync_v1',
       KC='exael_chat_v1', KG='exael_hor_gids_v1', KTAB='exael_tab_v1';
@@ -709,7 +708,7 @@ async function conectar(intentos){
  document.getElementById('no-bridge').style.display=(ok||avisoOculto())?'none':'';
  if(ok){
   log('Conectado con Google Calendar y Drive.','ok');
-  await Promise.all([loadGoogle(),loadMats()]);
+  await Promise.all([loadGoogle(),loadMats(),pintarEnlacesDrive()]);
  }else{
   log('No se encontró el puente de Cowork: Calendar y Drive deshabilitados.','er');
   renderEvents();renderMats();
@@ -742,6 +741,36 @@ async function mcp(tool,args){
  const r=await window.cowork.callMcpTool(tool,args);
  if(r.isError) throw new Error((r.content&&r.content[0]&&r.content[0].text)||'error');
  return r.structuredContent??JSON.parse(r.content[0].text);
+}
+/* carpetas de Drive: cada cuenta de Google tiene las suyas propias.
+   Se buscan por nombre la primera vez, se crean si no existen, y el id
+   queda en caché (localStorage) para no repetir la búsqueda cada vez. */
+async function carpeta(cacheKey,nombre,padre){
+ const cached=localStorage.getItem(cacheKey);
+ if(cached) return cached;
+ let q="mimeType = 'application/vnd.google-apps.folder' and name = '"+nombre+"'";
+ if(padre) q+=" and parentId = '"+padre+"'";
+ const d=await mcp(DRV+'search_files',{query:q,pageSize:1});
+ let id=(d.files||[])[0]&&d.files[0].id;
+ if(!id){
+  const a={title:nombre,contentMimeType:'application/vnd.google-apps.folder'};
+  if(padre) a.parentId=padre;
+  id=(await mcp(DRV+'create_file',a)).id;
+ }
+ localStorage.setItem(cacheKey,id);
+ return id;
+}
+const raizId=()=>carpeta(KFR,'EXAEL — Centro Académico');
+const materialId=async()=>carpeta(KFM,'Material de Estudio',await raizId());
+async function pintarEnlacesDrive(){
+ try{
+  const raiz=await raizId(), mat=await materialId();
+  const a1=document.getElementById('lnk-root'), a2=document.getElementById('lnk-mat'),
+        a3=document.getElementById('lnk-mat-syn');
+  if(a1) a1.href='https://drive.google.com/drive/folders/'+raiz;
+  if(a2) a2.href='https://drive.google.com/drive/folders/'+mat;
+  if(a3) a3.href='https://drive.google.com/drive/folders/'+mat;
+ }catch(e){}
 }
 /* fecha/hora local: el Calendar la interpreta con TZ, sin pasar por UTC */
 const fechaLocal=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -1070,7 +1099,7 @@ async function loadGoogle(){
 /* ===== sync a Sheets ===== */
 async function pushSheet(title,csv){
  const stamp=new Date().toISOString().slice(0,16).replace('T',' ');
- try{const r=await mcp(DRV+'create_file',{title:title+' — '+stamp,contentMimeType:'text/csv',parentId:FOLDER,textContent:csv});
+ try{const r=await mcp(DRV+'create_file',{title:title+' — '+stamp,contentMimeType:'text/csv',parentId:await raizId(),textContent:csv});
   log('Hoja creada: '+r.title,'ok');toast('Hoja creada en Drive');
   if(r.viewUrl&&!window.open(r.viewUrl,'_blank','noopener'))
    log('El navegador bloqueó la ventana. Ábrela desde la carpeta de Drive.','in');
@@ -1221,7 +1250,7 @@ async function handleFiles(files){
    const bar=document.querySelector('#'+id+' .bar i'); if(bar) bar.style.width='70%';
    const title='['+etiqueta+'] '+(materia?'['+materia+'] ':'')+f.name;
    const r=await mcp(DRV+'create_file',{title:title,contentMimeType:f.type||'application/octet-stream',
-    parentId:MAT_FOLDER,base64Content:b64,disableConversionToGoogleType:true});
+    parentId:await materialId(),base64Content:b64,disableConversionToGoogleType:true});
    document.getElementById(id).innerHTML='Subido a Drive: <b>'+esc(f.name)+'</b>'+(r.viewUrl?' — <a href="'+escA(r.viewUrl)+'" target="_blank" rel="noopener">abrir</a>':'');
    log('Material subido: '+title,'ok');toast(f.name+' guardado en Drive');
   }catch(e){
@@ -1235,7 +1264,7 @@ async function handleFiles(files){
 async function loadMats(){
  if(!hasMcp()){mats=[];renderMats();return;}
  try{
-  const d=await mcp(DRV+'search_files',{query:"parentId = '"+MAT_FOLDER+"'",pageSize:60,excludeContentSnippets:true});
+  const d=await mcp(DRV+'search_files',{query:"parentId = '"+await materialId()+"'",pageSize:60,excludeContentSnippets:true});
   mats=d.files||[];
   log('Biblioteca leída: '+mats.length+' archivo(s)','in');
  }catch(e){mats=[];log('No se pudo leer la biblioteca: '+e.message,'er');}
@@ -1585,7 +1614,7 @@ async function diagnostico(){
    marca('Google Calendar', true, 'Calendario "'+(d.summary||CAL_ID)+'" · zona '+(d.timeZone||'—'));
   }catch(e){ marca('Google Calendar', false, e.message); }
   try{
-   const d=await mcp(DRV+'search_files',{query:"parentId = '"+MAT_FOLDER+"'",pageSize:1,excludeContentSnippets:true});
+   const d=await mcp(DRV+'search_files',{query:"parentId = '"+await materialId()+"'",pageSize:1,excludeContentSnippets:true});
    marca('Google Drive', true, 'Carpeta de material accesible · '+((d.files||[]).length?'con archivos':'vacía'));
   }catch(e){ marca('Google Drive', false, e.message); }
  }else{
