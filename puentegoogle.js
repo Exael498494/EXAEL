@@ -12,8 +12,12 @@
   if (window.cowork && typeof window.cowork.callMcpTool === 'function') return; // ya hay puente real
 
   var CFG = 'exael_web_cfg_v1';
+  /* Client ID de Google: no es secreto (viaja igual en cualquier app web),
+     así que va fijo en el código para que nadie tenga que crear el suyo. */
+  var CLIENT_ID_POR_DEFECTO = '1049264410285-i6la977tj6cl3bd5tanu94g82ldmoaro.apps.googleusercontent.com';
   var cfg = {};
   try { cfg = JSON.parse(localStorage.getItem(CFG)) || {}; } catch (e) { cfg = {}; }
+  if (!cfg.clientId) cfg.clientId = CLIENT_ID_POR_DEFECTO;
 
   var SCOPES = [
     'https://www.googleapis.com/auth/calendar',
